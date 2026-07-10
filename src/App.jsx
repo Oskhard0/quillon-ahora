@@ -1,5 +1,28 @@
+// ======================================================
+// APP.JSX
+//
+// Orquestador principal de QUILLÓN AHORA.
+//
+// Este archivo coordina la navegación, el estado global
+// y la composición de los módulos principales.
+//
+// La lógica reutilizable debe migrar progresivamente a:
+// - utils/
+// - components/
+// - styles/
+//
+// Estado actual:
+// App.jsx aún contiene lógica en proceso de extracción,
+// manteniendo siempre el Estado Verde del proyecto.
+// ======================================================
 import { useState, useEffect, useRef } from "react";
+import Seccion from "./components/sections/Seccion.jsx";
+import Tarjeta from "./components/ui/Tarjeta.jsx";
+import TarjetaComercio from "./components/ui/TarjetaComercio";
+import { ESTILO_SECCION, ESTILO_TARJETA } from "./styles/componentes";
+import { TAMANOS } from "./styles/tipografia.js";
 import comercios from "./data/comercios";
+import { estaAbierto } from "./utils/horarios";
 import farmacias from "./data/farmacia";
 import farmaciaTurno from "./data/farmacia_turno";
 import emergencias from "./data/emergencias";
@@ -12,10 +35,21 @@ import elRoble from "./assets/imagenes/puente_itata.jpg";
 import bioparque from "./assets/imagenes/bioparque_quillon.jpg";
 import farmaciaTurnoImg from "./assets/imagenes/farmacia_simi.jpg";
 import logoQuillon from "./assets/imagenes/logo_quillon_ahora.png";
+import {COLORES} from "./styles/colores.js";
+import {COLORES_SECCION} from "./styles/colores.js";
+import { GRADIENTES } from "./styles/colores.js";
 import { FaHome} from "react-icons/fa";
 import { FaStore} from "react-icons/fa";
 import { FaMapMarkedAlt} from "react-icons/fa";
 import { FaExclamationTriangle } from "react-icons/fa";
+import { buscarIntencion } from "./utils/motor_intenciones.js";
+import { ESTILOS_INTENCION } from "./styles/intenciones";
+import { ACCIONES } from "./utils/motor_acciones";
+import { DESTINOS_BRUJULA} from "./knowledge/brujula";
+import { TIPO_ENTIDAD } from "./knowledge/tipos_entidad";
+import { obtenerDestacados } from "./knowledge/motor_destacados";
+import { obtenerDestinoBrujula } from "./utils/motor_brujula";
+import TarjetaIntencion from "./components/ui/TarjetaIntenciones.jsx";
 import {
   FaPhoneAlt,
   FaClock,
@@ -29,33 +63,114 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaTaxi 
-  } from "react-icons/fa"; {/*Aca se declaran los iconos react que se necesitan, si faltan se agregan a la lista */}
+  } from "react-icons/fa"; //*Aca se declaran los iconos react que se necesitan, si faltan se agregan a la lista.
 
-{/**aca estan declarados los colores oficiales por seccion */}
-  const COLOR_COMERCIO = "#2E7D32";
-  const COLOR_FARMACIA = "#1976D2";
-  const COLOR_EMERGENCIA = "#D32F2F";
-  const COLOR_EVENTO = "#F57C00";
-  const COLOR_TURISMO = "#00ACC1";
-  const COLOR_TRANSPORTE = "#6A1B9A";
-
-  
-  
-  {/*Inicio de app, aqui van todas las constantes o funciones */}
+  //*Inicio de app, aqui van todas las constantes o funciones 
 function App() {  
+// ======================================================
+// DESTACADOS AHORA
+//
+// Obtiene la configuración actual de los destacados.
+//
+// ======================================================
 
-  const hoy = new Date(); {/*los modulos de fecha acá, son para calcular los horarios de los buses, dia actual y proxima salida */}
+const destacadosConfigurados  = obtenerDestacados();
+
+
+// ======================================================
+// BRÚJULA
+//
+// Obtiene el destino actual recomendado por la Brújula.
+//
+// ======================================================
+
+const destinoBrujula = obtenerDestinoBrujula();
+
+
+// ======================================================
+// ESTADOS
+// Controlan el estado global de la interfaz y la interacción del usuario.
+// ======================================================
+
+const [tarjetasAbiertas, setTarjetasAbiertas] = useState({});
+const [categoriaAbierta, setCategoriaAbierta] = useState(null);
+
+// ======================================================
+// CATEGORÍAS
+// ======================================================
+
+const categoriasUnicas = [
+  ...new Set(
+    comercios.flatMap((comercio) =>
+      comercio.categoria
+        .split("•")
+        .map((cat) => cat.trim())
+    )
+  )
+].sort();
+
+// ======================================================
+// RESUMEN DE CATEGORÍAS
+// total / abiertos / cerrados
+// ======================================================
+
+const estadoCategorias = {};
+
+comercios.forEach((comercio) => {
+
+  comercio.categoria
+    .split("•")
+    .map((cat) => cat.trim())
+    .forEach((categoria) => {
+
+
+      if (!estadoCategorias[categoria]) {
+
+        estadoCategorias[categoria] = {
+          total: 0,
+          abiertos: 0,
+          cerrados: 0
+        };
+
+      }
+
+      estadoCategorias[categoria].total++;
+
+        if (estaAbierto(comercio.horario)) {
+            estadoCategorias[categoria].abiertos++;
+        } else {
+            estadoCategorias[categoria].cerrados++;
+        }
+    });
+
+});
+
+// ======================================================
+// TRANSPORTES · MOTOR DE TIEMPO
+//
+// Calcula el día actual, la próxima salida disponible y
+// el tiempo restante para los recorridos de buses.
+//
+// Arquitectura:
+// Este bloque constituye el motor temporal de Transportes.
+// En una futura refactorización deberá migrar a utils/buses.js.
+// ======================================================
+  const hoy = new Date();  // TODO Auditoría Revisar si las referencias de tiempo pueden unificarse utilizando una única fecha base.
   const diaSemana = hoy.getDay();
-  const horaActual = new Date();
+  const horaActual = new Date(); 
   const minutosActuales =
   horaActual.getHours() * 60 +
   horaActual.getMinutes();
-  let horariosActuales;
-  let nombreDia;
+  let horariosActuales;  // TODO Auditoría Revisar si esta variable sigue siendo necesaria.
+  let nombreDia; // TODO Auditoría
 
+// ------------------------------------------------------
+// Devuelve la próxima salida disponible según la hora actual.
+// Utilizada por el módulo Transportes.
+// ------------------------------------------------------
   const obtenerProximaSalida = (horarios) => {
 
-  const ahora = new Date();
+  const ahora = new Date();  
 
   const minutosActuales =
     ahora.getHours() * 60 +
@@ -72,9 +187,13 @@ function App() {
     });
   };
 
+// ------------------------------------------------------
+// Calcula el tiempo restante hasta una salida determinada.
+// Utilizada por el módulo Transportes.
+// ------------------------------------------------------
 const obtenerMinutosRestantes = (horaSalida) => {
   if (!horaSalida) return null;
-  const ahora = new Date();
+  const ahora = new Date(); // TODO Auditoría
   const minutosActuales =
     ahora.getHours() * 60 +
     ahora.getMinutes();
@@ -88,6 +207,10 @@ const obtenerMinutosRestantes = (horaSalida) => {
   return minutosSalida - minutosActuales;
   };
 
+ // ------------------------------------------------------
+// Genera un mensaje legible para el usuario indicando
+// cuánto falta para la próxima salida.
+// -----------------------------------------------------
   const formatearTiempoRestante = (minutos) => {
 
   if (minutos === null) {
@@ -108,12 +231,19 @@ const obtenerMinutosRestantes = (horaSalida) => {
   return `⏳ Sale en ${horas} hora${horas > 1 ? "s" : ""} y ${minutosRestantes} min`;
 };
 
-  const claveDiaActual =
+// Arquitectura:
+// Selecciona automáticamente el conjunto de horarios
+// correspondiente al día actual.
+  const claveDiaActual = 
   diaSemana >= 1 && diaSemana <= 5
     ? "lunesViernes"
     : diaSemana === 6
       ? "sabado"
       : "domingoFestivo";
+
+// Arquitectura:
+// Genera el nombre del día mostrado al usuario,
+// manteniendo una única nomenclatura para toda la aplicación.
 
   const nombreDiaActual =
   diaSemana >= 1 && diaSemana <= 5
@@ -131,13 +261,26 @@ const obtenerMinutosRestantes = (horaSalida) => {
   else {
   nombreDia = "Domingo y Festivos";
   }
- {/*Aca terminan los modulos de los dias para los buses */}
+ // ======================================================
 
-{/*Aqui se declaran las funciones de  los menu expandibles de los buses */}
+
+// ======================================================
+// ESTADO · TRANSPORTES
+//
+// Controla los menús desplegables del módulo Transportes,
+// permitiendo expandir recorridos y horarios.
+// ======================================================
   const [busExpandido, setBusExpandido] = useState(null);
-  const [diaExpandido, setDiaExpandido] = useState(null);
+  const [diaExpandido, setDiaExpandido] = useState(null); // TODO Auditoría Verificar si este estado continúa utilizándose.
   const [horarioExpandido, setHorarioExpandido] = useState(null);
-{/*Hasta Aqui se declaran las funciones de  los menu expandibles de los buses */}
+
+
+// ======================================================
+// DATOS DERIVADOS
+//
+// Obtiene información calculada a partir de los datos
+// principales utilizados por la interfaz.
+// ======================================================
 
   const farmaciasRef = useRef(null);
   const transportesRef = useRef(null);
@@ -146,8 +289,34 @@ const obtenerMinutosRestantes = (horaSalida) => {
   farmacia => farmacia.id === farmaciaTurno.farmaciaId
 )  || {};
 
+const proximoBusChillan =
+buses.find(
+    bus => bus.ruta === "Quillón - Chillán"
+);
+
+const proximoBusConcepcion =
+buses.find(
+    bus => bus.ruta === "Quillón - Concepción"
+);
+
+// ======================================================
+// NAVEGACIÓN
+// ======================================================
+
+// ------------------------------------------------------
+// Desplaza suavemente la pantalla hasta una sección.
+//
+// Utilizada por:
+// - barra inferior
+// - accesos rápidos
+// - buscador
+// - brújula
+// ------------------------------------------------------
   const scrollSuave = (id) => {
   const seccion = document.getElementById(id);
+
+// Futuro:
+// Extraer a utils/navigation.js
 
   if (seccion) {
     window.scrollTo({
@@ -157,18 +326,89 @@ const obtenerMinutosRestantes = (horaSalida) => {
   }
 };
 
+// ------------------------------------------------------
+// CONTEXTO
+//
+// Restablece la interfaz a un estado neutro antes de
+// iniciar una nueva navegación principal.
+//
+// Responsabilidad:
+//
+// • Limpiar búsquedas.
+// • Cerrar fichas abiertas.
+// • Restablecer elementos temporales de la interfaz.
+//
+// Arquitectura:
+//
+// No realiza navegación.
+// Solo reinicia el contexto activo del usuario.
+// ------------------------------------------------------
+const limpiarContexto = () => {
 
+  setBusqueda("");
 
-{/*aca se crea la funcion de busqueda de la brujula, que hace saltar desde los destacados a la tarjeta real */}
+  setDetalleComercio(null);
+
+  setDetalleLugar(null);
+
+  setMostrarMas(false);
+
+};
+
+// ------------------------------------------------------
+// NAVEGACIÓN PRINCIPAL
+//
+// Inicia una nueva navegación desde la barra inferior.
+//
+// Responsabilidad:
+//
+// • Reiniciar el contexto anterior.
+// • Desplazar la pantalla a la nueva sección.
+//
+// Arquitectura:
+//
+// Se utiliza exclusivamente desde la navegación principal.
+// ------------------------------------------------------
+const navegarASeccion = (id) => {
+
+    limpiarContexto();
+
+    scrollSuave(id);
+
+};
+
+// ======================================================
+// BRÚJULA
+//
+// Controla el comportamiento del botón flotante,
+// incluyendo su navegación y el contexto de la sección actual.
+//
+// Futuro:
+// Este bloque migrará al componente Brújula cuando deje de
+// depender del estado global de App.
+// ======================================================
+// ------------------------------------------------------
+// Desplaza la pantalla hasta el elemento principal de la
+// sección actualmente visible.
+// ------------------------------------------------------
+
 
   const irADestacado = () => {
-  let destino = null;
-  if (seccionActual === "comercios" && comercioDestacado) {
-    destino = `comercio-${comercioDestacado.id}`;
+
+    let destino = null;
+
+    if (seccionActual === "comercios" && comercioDestacado) {
+        destino = `comercio-${comercioDestacado.id}`;
   }
-  if (seccionActual === "lugares" && lugarDestacado) {
-    destino = `lugar-${lugarDestacado.id}`;
-  }
+// TODO Auditoría
+// Renombrar a comercioInicial cuando finalice la
+// migración de la Brújula.
+ if (seccionActual === "comercios" && comercioDestacado) {
+
+    abrirComercioDesdeBrujula(destinoBrujula.entidad);
+
+    return;
+}
   if (!destino) return;
 
   const elemento =
@@ -182,22 +422,63 @@ const obtenerMinutosRestantes = (horaSalida) => {
   }
 };
 
-  const [busqueda, setBusqueda] = useState("");
-  const [detalleLugar, setDetalleLugar] = useState(null);
-  const [detalleComercio, setDetalleComercio] = useState(null);
-  const [mostrarTexto, setMostrarTexto] = useState(false);
-  const [mostrarMas, setMostrarMas] = useState(false);
-  const [farmaciaExpandida, setFarmaciaExpandida] = useState(null);
-  const [seccionActual, setSeccionActual] = useState("inicio");
-  {/*console.log(seccionActual);*/}
+  const [busqueda, setBusqueda] = useState(""); //Buscador.
+  const [detalleLugar, setDetalleLugar] = useState(null); //Lugares.
+  const [detalleComercio, setDetalleComercio] = useState(null); //Comercios.
+  const [mostrarTexto, setMostrarTexto] = useState(false); // TODO Auditoría  Verificar si este estado continúa utilizándose.
+  const [mostrarMas, setMostrarMas] = useState(false); //Menú inferior, barra de navegacion.
+  const [farmaciaExpandida, setFarmaciaExpandida] = useState(null); //Farmacias.
+  const [seccionActual, setSeccionActual] = useState("inicio"); //Brújula.
+  const [brujulaContraida, setBrujulaContraida] = useState(false);//Brújula.
+  const [destinoScroll, setDestinoScroll] = useState(null);
 
-{/*Aca se genera el efecto del boton flotante donde cambia de nombre segun la seccion en la que está, mostrando el destacado */}
+// ======================================================
+// BÚSQUEDA / MOTOR DE INTENCIONES
+//
+// Interpreta el texto ingresado por el usuario para
+// determinar si corresponde a una intención conocida.
+//
+// Este motor no genera recomendaciones.
+// Solo identifica la intención y la devuelve para que
+// otros módulos decidan cómo responder.
+//
+// Arquitectura:
+// En el futuro podrá evolucionar para incorporar modelos
+// de IA, manteniendo la misma interfaz pública.
+// ======================================================
+
+const intencion = buscarIntencion(busqueda);
+
+
+const estiloIntencion = intencion
+  ? ESTILOS_INTENCION[intencion.ambiente]
+  : null;
+// ======================================================
+// ACCIONES DE NAVEGACIÓN
+//
+// Centraliza todas las acciones que modifican el estado
+// de navegación de la interfaz.
+//
+// Incluye:
+//
+// • Apertura de detalles.
+// • Navegación a destacados.
+// • Ejecución de acciones provenientes del
+//   Motor de Acciones.
+// ======================================================
   useEffect(() => {
+
+// ------------------------------------------------------
+// Identifica la sección ubicada en el centro de la pantalla
+// y actualiza el contexto de navegación.
+// ------------------------------------------------------
   const detectarSeccion = () => {
 
     const puntoCentral =
       window.scrollY + window.innerHeight / 2;
 
+// Futuro:
+// Extraer la configuración de secciones a un archivo dedicado.
     const secciones = [
       "inicio",
       "emergencias",
@@ -206,16 +487,21 @@ const obtenerMinutosRestantes = (horaSalida) => {
       "eventos"
     ];
 
+// Recorre las secciones registradas hasta encontrar
+// aquella que ocupa el centro de la pantalla.
+
     for (const id of secciones) {
 
       const elemento =
         document.getElementById(id);
 
       if (!elemento) continue;
-
+      // Calcula los límites visibles de la sección actual.
       const inicio = elemento.offsetTop;
       const fin = inicio + elemento.offsetHeight;
 
+      // Si el centro de la pantalla se encuentra dentro de la
+      // sección, esta pasa a ser la sección activa.
       if (
         puntoCentral >= inicio &&
         puntoCentral < fin
@@ -225,14 +511,14 @@ const obtenerMinutosRestantes = (horaSalida) => {
       }
     }
   };
-
+// Inicia la detección automática durante el desplazamiento.
   window.addEventListener(
     "scroll",
     detectarSeccion
   );
 
   detectarSeccion();
-
+// Elimina el listener al desmontar el componente.
   return () => {
     window.removeEventListener(
       "scroll",
@@ -242,30 +528,37 @@ const obtenerMinutosRestantes = (horaSalida) => {
 
 }, []);
 
-{/*Fin efecto boton flotante */}
-
-  const abiertos = comercios.filter(c => c.abierto);
+// ======================================================
+// DETALLE DE TARJETAS
+//
+// Controla la apertura y cierre del contenido expandible
+// de cada módulo.
+// ======================================================
 
     const toggleDetalleFarmacia = (id) => {
   setDetalleFarmacia(
     detalleFarmacia === id ? null : id
   );
-  };
+  }; // Alterna el detalle visible de una farmacia.
 
   const toggleDetalleComercio = (id) => {
   setDetalleComercio(
     detalleComercio === id ? null : id
   );
-  };
+  }; // Alterna el detalle visible de un comercio.
 
   const irAComercioDestacado = () => {
   scrollSuave("comercios");
 
   setDetalleComercio(
     comercioDestacado.id
-  );
+  ); // Alterna el detalle visible de un lugar de interés.
 
   };
+
+  // Futuro:
+// Evaluar una función reutilizable para alternar
+// detalles expandibles.
 
   const toggleDetalleLugar = (id) => {
     setDetalleLugar(
@@ -281,7 +574,44 @@ const obtenerMinutosRestantes = (horaSalida) => {
   );
 
 };
+// ------------------------------------------------------
+// Ejecuta una acción proveniente del Motor de Acciones.
+//
+// Responsabilidad:
+//
+// Interpretar las acciones generadas por los distintos
+// motores de la aplicación.
+//
+// Actualmente solo registra la acción recibida.
+//
+// En futuros microhitos ejecutará la navegación real.
+// ------------------------------------------------------
 
+function ejecutarAccion(accion) {
+
+    switch (accion.accion) {
+
+        case ACCIONES.ABRIR_CATEGORIA:
+
+            toggleCategoria(accion.categoria);
+            scrollSuave("comercios");
+
+            break;
+
+        default:
+
+            console.warn("Acción no soportada:", accion);
+
+    }
+
+}
+
+// ======================================================
+// CONFIGURACIÓN · LUGARES
+//
+// Relaciona cada lugar con la imagen utilizada por la
+// interfaz.
+// ======================================================
   const imagenesLugares = {
   laguna: lagunaAvendano,
   cascada: cascadaLiucura,
@@ -290,7 +620,18 @@ const obtenerMinutosRestantes = (horaSalida) => {
   };
 
   
-  {/*filtro de busqueda, puede ser nombre, categoria, direccion o referencia */}
+  // ======================================================
+// MOTOR DE BÚSQUEDA
+//
+// Genera los resultados de búsqueda para los distintos
+// módulos de QUILLÓN AHORA.
+//
+// Arquitectura:
+// Actualmente realiza filtros independientes por módulo.
+// En una futura versión podrá evolucionar hacia un buscador
+// unificado con resultados agrupados.
+// ======================================================
+
   const comerciosFiltrados = comercios.filter(comercio =>
   (comercio.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) ||
   (comercio.categoria || "").toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -298,17 +639,27 @@ const obtenerMinutosRestantes = (horaSalida) => {
   (comercio.referencia || "").toLowerCase().includes(busqueda.toLowerCase())
 );
 
+// ------------------------------------------------------
+// Filtra las farmacias según el texto ingresado.
+// ------------------------------------------------------
   const farmaciasFiltradas = farmacias.filter(farmacia =>
   farmacia.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
   farmacia.direccion.toLowerCase().includes(busqueda.toLowerCase()) ||
   farmacia.referencia.toLowerCase().includes(busqueda.toLowerCase())
 );
+// ------------------------------------------------------
+// Filtra los taxis por nombre o teléfono.
+// ------------------------------------------------------
 
 const taxisFiltrados = taxis.filter(taxi =>
   taxi.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
   taxi.telefono.includes(busqueda)
 );
 
+// ------------------------------------------------------
+// Filtra los recorridos de buses por nombre, ruta,
+// empresa o términos relacionados.
+// ------------------------------------------------------
 const busesFiltrados = buses.filter(bus =>
   bus.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
   bus.ruta.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -319,38 +670,127 @@ const busesFiltrados = buses.filter(bus =>
   "buses".includes(busqueda.toLowerCase())
 );
 
-  const comercioDestacado =
-  comercios.find(c => c.destacado);
+// TODO Auditoría
+// Normalizar el texto de búsqueda una sola vez para
+// evitar conversiones repetidas.
 
-  const lugarDestacado =
-  lugaresInteres.find(l => l.destacado);
 
-  {/*Funcion que hace cambiar nombre al boton flotante */}
+// ======================================================
+// DATOS DERIVADOS · TRANSPORTES
+//
+// Calcula la próxima salida disponible y el tiempo
+// restante para los recorridos principales.
+// ======================================================
+const salidaChillan =
+  obtenerProximaSalida(
+    proximoBusChillan.horarios[claveDiaActual].ida
+  );
+
+const minutosChillan =
+  obtenerMinutosRestantes(salidaChillan);
+
+const salidaConcepcion =
+  obtenerProximaSalida(
+    proximoBusConcepcion.horarios[claveDiaActual].ida
+  );
+
+const minutosConcepcion =
+  obtenerMinutosRestantes(salidaConcepcion);
+
+// ======================================================
+// ELEMENTOS PRINCIPALES
+//
+// Obtiene los elementos utilizados por la Brújula para
+// realizar la navegación contextual.
+//
+// TODO Auditoría:
+// Revisar la nomenclatura "comercioDestacado", ya que el
+// Motor de Horarios puede seleccionar un comercio que no
+// necesariamente sea destacado.
+// ======================================================
+// ======================================================
+// DESTACADOS AHORA
+//
+// Resolución temporal de las entidades utilizadas por la
+// tarjeta "Destacados Ahora".
+//
+// TODO Auditoría:
+// Sustituir esta implementación por el Motor de
+// Destacados una vez finalizada la migración.
+//
+// ======================================================
+
+const comercioDestacado =
+  destacadosConfigurados.find(
+    d => d.tipo === TIPO_ENTIDAD.COMERCIO
+  )?.entidad;
+
+const lugarDestacado =
+  destacadosConfigurados.find(
+    d => d.tipo === TIPO_ENTIDAD.LUGAR
+  )?.entidad;
+  // ======================================================
+// DESTACADOS AHORA
+//
+// Obtiene las entidades definidas por el sistema de
+// Destacados.
+//
+// TODO Auditoría:
+// Sustituir esta resolución temporal por el
+// Motor de Destacados.
+// ======================================================
+
+// ------------------------------------------------------
+// Devuelve el texto mostrado por la Brújula según la
+// sección actualmente visible.
+// ------------------------------------------------------
   const textoBrujula = () => {
   if (seccionActual === "comercios")
     return comercioDestacado?.nombre;
   if (seccionActual === "lugares")
     return lugarDestacado?.nombre;
-  return "Destacado Ahora";
+  return "Recomendado por QA";
   };
- {/* console.log(seccionActual);*/}
+// TODO Auditoría
+// Actualizar el texto por defecto de la Brújula tras la
+// eliminación de la categoría "Abierto ahora".
 
-  {/*esta funcion devuelve los destacados por seccion y filtra si no hay destacados */}
+// ======================================================
+// ELEMENTOS PRINCIPALES
+//
+// Reúne los elementos utilizados por la Brújula para la
+// navegación contextual, descartando referencias nulas.
+// ======================================================
   const destacados = [comercioDestacado, lugarDestacado].filter(Boolean);
+// TODO Auditoría
+// Revisar la nomenclatura cuando la Brújula evolucione
+// hacia el Módulo de Navegación Inteligente.
   
-{/*aca se seleccionan los iconos 
-  de cada categoria de comercio*/}
+// ======================================================
+// ICONOGRAFÍA DE COMERCIOS
+//
+// Asigna el icono representativo a cada categoría de
+// comercio utilizada por la aplicación.
+//
+// Arquitectura:
+// Esta configuración forma parte del Design System.
+// En el futuro podrá migrar a una configuración central
+// de iconografía.
+// ======================================================
+
+// Futuro:
+// Migrar a styles/iconos.js
 
   const obtenerIconoCategoria = (categoria) => {
   switch (categoria.toLowerCase()) {
-    case "restaurant":
+    case "restaurante":
       return "🍽️";
 
     case "ferreteria":
-      return "🔧";
+      return "🛠️";
 
-    case "florería":
-      return "🌷";
+    case "floreria":
+      return "🌸";
 
     case "farmacia":
       return "💊";
@@ -358,48 +798,348 @@ const busesFiltrados = buses.filter(bus =>
     case "supermercado":
       return "🛒";
 
-    case "panadería":
+    case "panaderia":
       return "🥖";
 
-    case "verdulería":
+    case "verduleria":
       return "🥬";
 
-    case "carnicería":
+    case "carniceria":
       return "🥩";
 
-    case "pizzería":
+    case "pizzeria":
       return "🍕";
+    
+    case "almacen":
+      return "🏪";
+    
+    case "bar":
+      return "🍺";
+
+    case "botilleria":
+      return "🍷";
+    
+    case "cafeteria":
+      return "☕";
+
+    case "bazar":
+      return "🛍️";
+    
+    case "comercializadora":
+      return "📦";
+
+    case "cuberteria":
+      return "🍴";
+    
+    case "distribuidora":
+      return "🚚";
+
+    case "fastfood":
+      return "🍔";
+
+    case "floristeria":
+      return "💐";
+
+    case "fruteria":
+      return "🍎";
+    
+    case "libreria":
+      return "📚";
+
+    case "material sanitario":
+      return "🩺";
+
+    case "multitienda":
+      return "🏬";
+
+    case "veterinaria":
+      return "🐶";
+
+    case "funeraria":
+      return "⚰️";
+
+    case "vulcanizacion":
+      return "🛞";
+
+    case "taller mecanico":
+      return " 🔧";
+
+    case "peluqueria":
+      return "💇";
+    
+      case "repuestos automotrices":
+      return "⚙️";
 
     default:
       return "📍";
       
   }
+ };
 
- 
-
-};
+// ======================================================
+// RESULTADOS DE BÚSQUEDA
+//
+// Calcula la cantidad total de coincidencias obtenidas
+// por el Motor de Búsqueda.
+// ======================================================
+  
 const totalResultados =
   comerciosFiltrados.length +
   farmaciasFiltradas.length +
   taxisFiltrados.length +
   busesFiltrados.length;
 
- {/*Aca empieza el hero de la app con el logo y el slogan*/}
+
+// ======================================================
+// COMERCIOS · NAVEGACIÓN
+//
+// Gestiona la interacción de las categorías y tarjetas
+// del módulo Comercios.
+//
+// Arquitectura:
+// Solo una categoría puede permanecer abierta al mismo
+// tiempo, mientras que cada categoría puede mantener
+// múltiples tarjetas expandidas.
+//
+// La selección inicial del comercio depende
+// exclusivamente del Motor de Horarios.
+// ======================================================
+// ------------------------------------------------------
+// Abre o cierra una categoría y selecciona automáticamente
+// el comercio inicial según las reglas del Motor de Horarios.
+// ------------------------------------------------------
+ function toggleCategoria(categoria, comercioForzado = null) {
+
+  
+
+  if (categoriaAbierta === categoria) {
+
+    setCategoriaAbierta(null);
+
+    return;
+
+  }
+
+  // Abrimos la nueva categoría
+  setCategoriaAbierta(categoria);
+
+  // ------------------------------------------------------
+  // Navegación dirigida.
+  //
+  // Arquitectura:
+  //
+  // Permite que otros módulos (como la Brújula)
+  // indiquen explícitamente qué comercio debe abrirse,
+  // evitando aplicar la selección automática del
+  // Motor de Horarios.
+  // ------------------------------------------------------
+
+  if (comercioForzado) {
+
+    setTarjetasAbiertas({
+
+      [categoria]: [comercioForzado.id]
+
+    });
+
+    return;
+
+  }
+
+  const comercioInicial =
+    obtenerComercioInicial(categoria);
+
+  // Si existe, abrimos esa tarjeta
+  if (comercioInicial) {
+
+    setTarjetasAbiertas({
+
+      [categoria]: [comercioInicial.id]
+
+    });
+
+  }
+
+}
+
+// ------------------------------------------------------
+// Determina qué comercio debe abrirse automáticamente al
+// ingresar a una categoría.
+//
+// Prioridad:
+//
+// 1. Primer comercio abierto.
+// 2. Comercio destacado.
+// 3. Primer comercio disponible.
+//
+// Arquitectura:
+// El estado abierto/cerrado se obtiene exclusivamente
+// desde el Motor de Horarios.
+// ------------------------------------------------------
+  function obtenerComercioInicial(categoria) {
+
+  const comerciosCategoria = comercios.filter((comercio) =>
+    comercio.categoria
+      .split("•")
+      .map((cat) => cat.trim())
+      .includes(categoria)
+  );
+ 
+ const primerAbierto = comerciosCategoria.find(c =>
+    estaAbierto(c.horario)  
+  );
+
+  if (primerAbierto) return primerAbierto;
+
+  const destacado = comerciosCategoria.find(
+    (c) => c.destacado
+  );
+
+  if (destacado) return destacado;
+
+  return comerciosCategoria[0] ?? null;
+
+}
+// ------------------------------------------------------
+// Alterna el estado expandido de una tarjeta de comercio.
+//
+// Arquitectura:
+// Una categoría puede mantener múltiples tarjetas abiertas
+// simultáneamente.
+// ------------------------------------------------------
+
+function toggleTarjeta(categoria, id) {
+
+  setTarjetasAbiertas((prev) => {
+
+    const abiertas = prev[categoria] || [];
+
+    const existe = abiertas.includes(id);
+
+    return {
+      ...prev,
+      [categoria]: existe
+        ? abiertas.filter((x) => x !== id)
+        : [...abiertas, id]
+    };
+
+  });
+
+}
+// ------------------------------------------------------
+// BRÚJULA
+//
+// Navega directamente hacia un comercio recomendado por
+// la Brújula.
+//
+// Arquitectura:
+//
+// Abre automáticamente la categoría principal y la
+// tarjeta del comercio.
+//
+// El desplazamiento (scroll) se realiza posteriormente
+// cuando React termina de renderizar.
+//
+// ------------------------------------------------------
+
+function abrirComercioDesdeBrujula(comercio) {
+
+  // 1. La Brújula define el comercio activo
+    setDestinoScroll(comercio.id);
+
+  // 2. Obtiene la categoría principal
+   const categoriaPrincipal =
+      comercio.categoria
+        .split("•")[0]
+        .trim();
+
+        
+
+     // 3. Abre la categoría correspondiente
+    toggleCategoria(categoriaPrincipal, comercio);
+}
+
+// ======================================================
+// efecto nuevo para brujula
+// ======================================================
+
+useEffect(() => {
+  const contraer =
+  busqueda.trim() !== "" ||
+  detalleComercio !== null ||
+  detalleLugar !== null;
+
+  
+
+  setBrujulaContraida(contraer);
+}, [busqueda]);
+
+
+useEffect(() => {
+
+  
+
+  if (!destinoScroll) return;
+
+  const elemento = document.getElementById(
+    `comercio-${destinoScroll}`
+  );
+
+
+  if (!elemento) return;
+
+  elemento.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+
+  setDestinoScroll(null);
+
+}, [
+  destinoScroll,
+  categoriaAbierta,
+  tarjetasAbiertas
+]);
+// ======================================================
+// HERO
+//
+// Presentación principal de QUILLÓN AHORA.
+//
+// Da la bienvenida al usuario y comunica la identidad,
+// propósito y estado actual de la aplicación.
+//
+// UX:
+// Es la primera impresión del usuario y debe transmitir
+// confianza, simplicidad y cercanía.
+// ======================================================
+
+// ======================================================
+// HERO
+//
+// Presenta la identidad visual de QUILLÓN AHORA.
+//
+// UX:
+// Primera impresión del usuario.
+//
+// ======================================================
 
   return (
+    // Sección inicial utilizada como punto de referencia para
+      // la navegación principal de la aplicación.
     <div
       style={{
         minHeight: "100vh",
-        backgroundColor: "#f5f5f5",
+        backgroundColor: COLORES.fondo,
         fontFamily: "'Segoe UI', sans-serif",
-        padding: "30px",
+        padding: "12px",
+        overflowX: "hidden"
       }}
     >
+      
       <header
       id="inicio"
         style={{
-          background:
-            "linear-gradient(135deg, #1976D2, #26A69A)",
+          background: GRADIENTES.principal,
           color: "white",
           padding: "35px",
           borderRadius: "18px",
@@ -424,8 +1164,11 @@ const totalResultados =
         objectFit: "contain",
       }}
     />
-
+      {/* ======================================================
+          HERO
+      ====================================================== */}
     <div>
+      
       <h1
         style={{
         margin: "0",
@@ -436,19 +1179,20 @@ const totalResultados =
       >
         Quillón Ahora
       </h1>
-
+      
       <div
         style={{
-          backgroundColor: "#FFF3CD",
-          color: "#856404",
+          backgroundColor: COLORES.fondo,
+          color: COLORES.texto,
           padding: "10px",
           borderRadius: "10px",
           marginTop: "10px",
           marginBottom: "20px",
-          fontSize: "14px",
+          fontSize: TAMANOS.sm,
           textAlign: "center"
         }}
       >
+        {/* Aviso Beta */}
           <p>🚧 QUILLÓN AHORA🚧</p>
           se encuentra en fase de pruebas.
           La información publicada puede contener errores u omisiones.
@@ -465,29 +1209,175 @@ const totalResultados =
        fontSize: "clamp(14px, 2.5vw, 18px)",
        opacity: "0.9"
   }}
+  // Mensaje que resume la filosofía de QUILLÓN AHORA.
       >
         La app del vecino que sabe
       </p>
+      
     </div>
   </div>
+  
 </header>
 </header>
+{/* ======================================================
+    CENTRO DE INFORMACIÓN INMEDIATA
 
-{/*Acá comienza el Destacados Ahora*/}
+    Reúne la información más importante para el usuario
+    al ingresar a QUILLÓN AHORA.
+====================================================== */}
+
+<div
+  style={{
+    backgroundColor: "#FFF8E1",
+    borderLeft: "6px solid #FFB300",
+    borderTop: "6px solid #FFB300",
+    borderRadius: "12px",
+    padding: "15px",
+    marginTop: "20px",
+    marginBottom: "20px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
+  }}
+>
+  <h3>📌 Importante Ahora</h3>
+
+{/* Farmacia de Turno */}
+  <div
+  onClick={() => scrollSuave("farmaciaTurno")}
+  style={{
+    cursor: "pointer",
+    padding: "10px",
+    borderRadius: "10px"
+  }}
+  
+>
+  <strong>💊 Farmacia de turno</strong>
+
+  <p>{farmaciaActual?.nombre}</p>
+
+  <p
+    style={{
+      fontSize: TAMANOS.sm,
+      color: COLORES.subtitulo,
+      marginBottom: 0
+    }}
+  >
+    ⬇ Ver más detalles
+  </p>
+</div>
+
+  <hr />
+{/* Próximo bus a Chillán */}
+  <div
+  onClick={() => scrollSuave("transportes")}
+  style={{
+    cursor: "pointer",
+    padding: "10px",
+    borderRadius: "10px"
+  }}
+>
+  <strong>🚌 Próximo bus a Chillán</strong> 
+  
+<p>
+  Próxima salida:
+  {
+    obtenerProximaSalida(
+      proximoBusChillan.horarios[claveDiaActual].ida
+    ) || "NINGUNA"
+  }
+</p>
+  <p>
+     {
+    formatearTiempoRestante(
+      obtenerMinutosRestantes(
+        obtenerProximaSalida(
+          proximoBusChillan.horarios[claveDiaActual].ida
+        )
+      )
+    )
+  }
+  </p>
+
+  <p
+    style={{
+      fontSize: TAMANOS.sm,
+      color: COLORES.subtitulo,
+      marginBottom: 0
+    }}
+  >
+    ⬇ Ver más detalles
+  </p>
+
+</div>
+
+   <hr />
+{/* Próximo bus a Concepción */}
+  
+ <div
+  onClick={() => scrollSuave("transportes")}
+  style={{
+    cursor: "pointer",
+    padding: "10px",
+    borderRadius: "10px"
+  }}
+>
+  <strong>🚌 Próximo bus a Concepción</strong>
+
+  <p>
+    Próxima salida: 
+  {
+    obtenerProximaSalida(
+      proximoBusConcepcion.horarios[claveDiaActual].ida
+    ) || "NINGUNA"
+  }
+  </p>
+
+  <p>
+    {
+    formatearTiempoRestante(
+      obtenerMinutosRestantes(
+        obtenerProximaSalida(
+          proximoBusConcepcion.horarios[claveDiaActual].ida
+        )
+      )
+    )
+  }
+  </p>
+
+  <p
+    style={{
+      fontSize: TAMANOS.sm,
+      color: COLORES.subtitulo,
+      marginBottom: 0
+    }}
+  >
+    ⬇ Ver más detalles
+  </p>
+</div>
+  
+</div>
+
+{/* ======================================================
+    BRÚJULA · ACCESOS PRINCIPALES
+
+    Presenta los accesos rápidos hacia los elementos
+    principales de cada sección de la aplicación.
+
+    UX:
+    Permite al usuario descubrir contenido relevante
+    con un solo toque.
+====================================================== */}
 <div
           style={{
+             ...ESTILO_SECCION,
             backgroundColor: "#FFF8E1",
-            padding: "15px",
-            borderRadius: "16px",
-            marginTop: "20px",
-            borderTop: `5px solid ${COLOR_EVENTO}`,
-            borderLeft: `5px solid ${COLOR_EVENTO}`,
+            borderTop: `5px solid ${COLORES_SECCION.evento}`,
+            borderLeft: `5px solid ${COLORES_SECCION.evento}`,
             boxShadow: "0 6px 16px rgba(0,0,0,0.08)"
           }}
       >
           <strong
             style={{
-              color: COLOR_EVENTO,
+              color: COLORES_SECCION.evento,
               display: "inline-block",
               padding: "6px 12px",
               borderRadius: "20px",
@@ -497,6 +1387,7 @@ const totalResultados =
           >
             <FaCompass /> Destacados Ahora
           </strong>
+          {/* Comercio principal */}
           <p
               onClick={irAComercioDestacado}
               style={{
@@ -521,9 +1412,10 @@ const totalResultados =
                 marginBottom: "12px"
               }}
             >
+              {/* Lugar de interés principal */}
               <FaMapMarkedAlt
                 style={{
-                  marginRight: "8 px",
+                  marginRight: "8px",
                   color:"#424242"
                 }}
               />
@@ -534,7 +1426,25 @@ const totalResultados =
 </div>
 
 
-{/* Aca empieza el buscador de comercios por nombre, localizacion, o descripcion*/}
+{/* / ======================================================
+// BUSCADOR GLOBAL
+//
+// Punto de entrada del Motor de Búsqueda.
+//
+// UX:
+// Permite al usuario localizar rápidamente información
+// relevante sin navegar manualmente por los módulos.
+//
+// Arquitectura:
+// Actualmente consulta módulos independientes
+// (Comercios, Farmacias, Transportes).
+//
+// En una futura versión evolucionará hacia el
+// Motor de Búsqueda Unificado.
+// ======================================================
+*/}
+
+{/* Campo de búsqueda */}
       <div
         style={{
           marginTop: "20px",
@@ -551,7 +1461,7 @@ const totalResultados =
           style={{
             width: "100%",
             padding: "12px",
-            fontSize: "16px",
+            fontSize: TAMANOS.md,
             boxSizing: "border-box"
           }}
         />
@@ -561,83 +1471,91 @@ const totalResultados =
       {busqueda && (
         <div
         style={{
-          backgroundColor: "white",
+          backgroundColor: COLORES.fondo,
           padding: "15px",
           borderRadius: "12px",
           marginTop: "20px",
         }}
       >
-        {/*Modulo que muestra resultados de comercios en la busqueda */}
+{/*// // ------------------------------------------------------
+// MOTOR DE INTENCIONES
+//
+// Interpreta el texto ingresado por el usuario para
+// identificar una intención conocida.
+//
+// Responsabilidad:
+//
+// • Analizar el texto.
+// • Devolver una intención o null.
+//
+// No genera recomendaciones.
+// No consulta comercios.
+// No conoce horarios.
+//
+// La decisión sobre cómo responder pertenece al
+// Motor de Recomendaciones.
+//
+// Arquitectura:
+// Esta capa representa el conocimiento semántico de la
+// aplicación y podrá evolucionar en el futuro para
+// incorporar IA manteniendo la misma interfaz.
+// ------------------------------------------------------*/}       
+
+{intencion && (
+  <TarjetaIntencion
+    intencion={intencion}
+    estilo={estiloIntencion}
+    onSeleccionarCategoria={ejecutarAccion}
+/>
+)}
+
+{/*// ======================================================
+// RESULTADOS DEL BUSCADOR
+//
+// Se muestran únicamente cuando existe texto ingresado.
+//
+// Arquitectura:
+// El Motor de Búsqueda solo obtiene coincidencias.
+// Cada dominio es responsable de representar sus propios
+// resultados mediante sus componentes oficiales.
+//
+// Ejemplos:
+// - Comercios → TarjetaComercio
+// - Farmacias → TarjetaFarmacia (futuro)
+// - Buses → TarjetaBus (futuro)
+// ====================================================== 
+// // ------------------------------------------------------
+// RESULTADOS · COMERCIOS
+//
+// Utiliza el componente oficial TarjetaComercio.
+//
+// Arquitectura:
+// El buscador no conoce la representación visual de un
+// comercio. Solo entrega los resultados encontrados.
+// ------------------------------------------------------*/}
         <h3>🔍 Resultados</h3>
         {comerciosFiltrados.length === 0 && (
           <p>No se encontraron comercios con ese criterio.</p>
         )}
 
-          {comerciosFiltrados.map(comercio => (
-            <div
-            style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}
-             onClick={() => toggleDetalleComercio(comercio.id)}
-              key={comercio.id}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = "0 6px 12px rgba(0,0,0,0.15)";
-              }}
+         {comerciosFiltrados.map((comercio) => (
+              <TarjetaComercio
+                key={comercio.id}
+                comercio={comercio}
+                expandida={detalleComercio === comercio.id}
+                onClick={() => toggleDetalleComercio(comercio.id)}
+              />
+            ))}
 
-                onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
-              }}
-
-              style={{
-                backgroundColor: "#f8f8f8",
-                padding: "10px",
-                maxWidth: "350px",
-                margin: "0 auto 10px auto",
-                borderRadius: "10px",
-                marginBottom: "15px",
-                textAlign: "left",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                borderLeft: comercio.abierto
-                  ? "5px solid #2E7D32"
-                  : "5px solid #C62828",
-                backgroundColor: comercio.abierto
-                  ? "#F1F8E9"
-                  : "#FFEBEE",
-                transition: "all 0.2s ease",
-                cursor: "pointer",
-              }}
-            >
-              <strong>{comercio.nombre}</strong>
-
-              <p><FaMapMarkedAlt style={{ marginRight: "6px", color: COLOR_COMERCIO }}/> {comercio.direccion}</p>
-              <p><FaCompass style={{ marginRight: "6px", color: COLOR_COMERCIO }}/> {comercio.referencia}</p>
-              <p>{obtenerIconoCategoria(comercio.categoria)}
-                {" "}
-                {comercio.categoria}</p>
-
-              <p>
-              {comercio.abierto
-                ? "🟢 Abierto"
-                : "🔴 Cerrado"}
-              </p>
-                 {detalleComercio === comercio.id
-                  ? <FaChevronUp />
-                  : <FaChevronDown />}
-             
-              {detalleComercio === comercio.id && (
-                <div>
-                  <p><FaPhoneAlt  style={{ marginRight: "6px", color: "#2E7D32" }}/> {comercio.telefono}</p>
-                  <p><FaClock  style={{ marginRight: "6px", color: "#2E7D32" }}/> {comercio.horario}</p>
-                </div>
-              )}
-
-            </div>
-          ))}
-            {/*Modulo que muestra resultados de farmacias en la busqueda */}
+ {/*// ------------------------------------------------------
+// RESULTADOS · FARMACIAS
+//
+// Muestra las farmacias coincidentes con la búsqueda.
+//
+// TODO Arquitectura:
+// Sustituir esta representación por TarjetaFarmacia
+// cuando el componente exista.
+// ------------------------------------------------------ */}
             {farmaciasFiltradas.length > 0 && (
               <>
                 <h3
@@ -657,14 +1575,14 @@ const totalResultados =
                       marginBottom: "10px",
                       borderRadius: "10px",
                       cursor: "pointer",
-                      borderTop: `5px solid ${COLOR_FARMACIA}`,
+                      borderTop: `5px solid ${COLORES_SECCION.farmacia}`,
                       transition: "all 0.2s ease"
                     }}
                   >
                     <strong>{farmacia.nombre}</strong>
                     <p
                       style={{
-                        fontSize: "12px",
+                        fontSize: TAMANOS.xs,
                         opacity: "0.7"
                       }}
                     >
@@ -676,7 +1594,14 @@ const totalResultados =
               </>
             )}
 
-            {/*Modulo que muestra resultados de taxis en la busqueda */}
+{/*// ------------------------------------------------------
+// RESULTADOS · TAXIS
+//
+// Presenta accesos rápidos a teléfonos de taxis.
+//
+// TODO Arquitectura:
+// Migrar a TarjetaTaxi para unificar la presentación.
+// ------------------------------------------------------ */}
             {taxisFiltrados.length > 0 && (
               <>
                 <h3
@@ -691,12 +1616,12 @@ const totalResultados =
                     key={taxi.id}
                     onClick={() => scrollSuave("transportes")}
                     style={{
-                      backgroundColor: "#F5F3EA",
+                      backgroundColor: COLORES.fondo,
                       padding: "10px",
                       marginBottom: "10px",
                       borderRadius: "10px",
                       cursor: "pointer",
-                      borderTop: `5px solid ${COLOR_TRANSPORTE}`,
+                      borderTop: `5px solid ${COLORES_SECCION.transporte}`,
                       transition: "all 0.2s ease"
                     }}
                   >
@@ -709,7 +1634,15 @@ const totalResultados =
                 ))}
               </>
             )}
-            {/*Modulo que muestra resultados de buses en la busqueda */}
+ {/*// ------------------------------------------------------
+// RESULTADOS · BUSES
+//
+// Presenta recorridos encontrados.
+//
+// TODO Arquitectura:
+// Reemplazar por TarjetaBus para reutilizar la lógica del
+// módulo Transportes.
+// ------------------------------------------------------ */}
             {busesFiltrados.length > 0 && (
               <>
                 <h3
@@ -724,19 +1657,19 @@ const totalResultados =
                     key={bus.id}
                     onClick={() => scrollSuave("transportes")}
                     style={{
-                      backgroundColor: "#FFF8E1",
+                      backgroundColor: COLORES.fondo,
                       padding: "10px",
                       marginBottom: "10px",
                       borderRadius: "10px",
                       cursor: "pointer",
-                      borderTop: `5px solid ${COLOR_TRANSPORTE}`,
+                      borderTop: `5px solid ${COLORES_SECCION.transporte}`,
                       transition: "all 0.2s ease"
                     }}
                   >
                     <strong>{bus.nombre}</strong>
                     <p
                         style={{
-                          fontSize: "12px",
+                          fontSize: TAMANOS.xs,
                           opacity: "0.7"
                         }}
                       >
@@ -754,8 +1687,20 @@ const totalResultados =
       )}
 {/*Div final del buscador */}
 
-{/*Flex envuelve farmacia de turno
- y emergencias para mejorar visualización*/}
+{/*// ======================================================
+// INFORMACIÓN CRÍTICA
+//
+// Reúne los módulos de mayor prioridad para el usuario,
+// proporcionando acceso inmediato a servicios esenciales.
+//
+// UX:
+// Esta zona concentra información que el usuario puede
+// necesitar con urgencia o alta frecuencia.
+//
+// Módulos:
+// - Farmacia de Turno
+// - Emergencias
+// ======================================================*/}
       <div
         style={{
           display: "flex",
@@ -764,8 +1709,22 @@ const totalResultados =
           flexWrap: "wrap"
         }}        
       >
-       {/*Acá empieza el modulo farmacia de turno*/}
-        <div             
+{/*// ======================================================
+// FARMACIA DE TURNO
+//
+// Muestra la farmacia oficialmente asignada para el día,
+// junto con su información de contacto.
+//
+// Fuente de datos:
+// farmacia_turno.js
+//
+// UX:
+// Es uno de los módulos prioritarios de la aplicación,
+// por lo que permanece siempre visible desde la pantalla
+// principal.
+// ======================================================*/}
+        <div          
+          id="farmaciaTurno"  
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-3px)";
                 e.currentTarget.style.boxShadow = "0 6px 12px rgba(0,0,0,0.15)";
@@ -778,17 +1737,19 @@ const totalResultados =
 
           style={{
               flex: "1 1 350px",
-              backgroundColor: "#FFFFFF",
-              padding: "20px",
-              borderRadius: "16px",
-              marginTop: "20px",
-              border: `3px solid ${COLOR_FARMACIA}`,
-              borderTop: `4px solid ${COLOR_FARMACIA}`,
+              backgroundColor: COLORES.fondo,
+               ...ESTILO_SECCION,
+              border: `3px solid ${COLORES_SECCION.farmacia}`,
+              borderTop: `4px solid ${COLORES_SECCION.farmacia}`,
               boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
             }}
             > {/*Termino del primer div de la farmacia, solo se crearon eventos y marco*/}
 
-              {/*Insercion de imagen ya declarada*/}
+{/*// Imagen representativa del módulo.
+//
+// Arquitectura:
+// La fotografía es decorativa y no representa
+// necesariamente la farmacia de turno vigente.*/}
               <img 
                 src={farmaciaTurnoImg}
                 alt="Farmacia de Turno"
@@ -800,27 +1761,12 @@ const totalResultados =
                   marginBottom: "15px"
                 }}
               />
-                           
-                {/*<div
-                style={{
-                  backgroundColor: COLOR_FARMACIA,
-                  color: "white",
-                  display: "inline-block",
-                  padding: "6px 12px",
-                  borderRadius: "20px",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  marginBottom: "10px"
-                }}
-              >
-              DESTACADO AHORA
-              </div>*/}
-
+              
               <h2 
-              style={{ color: COLOR_FARMACIA,
+              style={{ color: COLORES_SECCION.farmacia,
               marginBottom: "5px",
               fontWeight: "700",
-              fontSize: "29px" }}
+              fontSize: TAMANOS.xxl }}
              
               >Farmacia de Turno</h2>             
                 <div
@@ -828,26 +1774,27 @@ const totalResultados =
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    backgroundColor: COLOR_FARMACIA,
+                    backgroundColor: COLORES_SECCION.farmacia,
                     color: "white",
                     padding: "8px 16px",
                     borderRadius: "20px",
                     fontWeight: "800",
-                    fontSize: "15px",
+                    fontSize: TAMANOS.md,
                     marginBottom: "12px",
                     letterSpacing: "0.5px",
                     boxShadow: "0 2px 6px rgba(0,0,0,0.15)"
                   }}
                 >
                   🟢 EN TURNO HOY
-                </div>              
+                </div>    
+                         
               <p><strong
               style={{
-              fontSize: "18px",
-              color: "#333"}}
+              fontSize: TAMANOS.lg,
+              color: COLORES.subtitulo}}
               >{farmaciaActual.nombre}</strong></p>
-              <p> <FaMapMarkedAlt style={{ marginRight: "6px", color: COLOR_FARMACIA }} />{farmaciaActual.direccion}</p>
-              <p> <FaCompass style={{ marginRight: "6px", color: COLOR_FARMACIA }}/>{farmaciaActual.referencia}</p>
+              <p> <FaMapMarkedAlt style={{ marginRight: "6px", color: COLORES_SECCION.farmacia }} />{farmaciaActual.direccion}</p>
+              <p> <FaCompass style={{ marginRight: "6px", color: COLORES_SECCION.farmacia }}/>{farmaciaActual.referencia}</p>
               <p>
                 <a
                   href={`tel:${farmaciaActual.telefono}`}
@@ -856,55 +1803,56 @@ const totalResultados =
                     textDecoration: "none"
                   }}
                 >
-                  <FaPhoneAlt style={{ marginRight: "6px", color: COLOR_FARMACIA }}/> {farmaciaActual.telefono}
+                  <FaPhoneAlt style={{ marginRight: "6px", color: COLORES_SECCION.farmacia }}/> {farmaciaActual.telefono}
                 </a>
               </p>              
-              <p> <FaClock style={{ marginRight: "6px", color: COLOR_FARMACIA }}/> {farmaciaActual.horarioTurno}</p>
+              <p> <FaClock style={{ marginRight: "6px", color: COLORES_SECCION.farmacia }}/> {farmaciaActual.horarioTurno}</p>
         </div>
 
-        {/*Acá empieza modulo emergencias*/}
-      <div
-        id="emergencias"
-        style={{
-          flex: "1 1 350px",
-          backgroundColor: "#FFF5F5",
-          padding: "15px",
-          borderRadius: "12px",
-          scrollMarginTop: "80px"
-        }}
-      >
-        <h2 
-          style={{
-            color: COLOR_EMERGENCIA,
-            marginBottom: "5px",
-            fontWeight: "700",
-            fontSize: "26px"
-          }}
-        >
-          <FaExclamationTriangle
-            style={{
-            marginRight: "8px",
-            verticalAlign: "middle"
-          }}
-        /> Emergencias
-        </h2>
-
+{/*// ======================================================
+// EMERGENCIAS
+//
+// Presenta los principales números de emergencia
+// disponibles dentro de la comuna.
+//
+// Arquitectura:
+// Cada registro proviene del módulo de datos
+// emergencias.js.
+//
+// UX:
+// Se prioriza el acceso inmediato mediante enlaces
+// telefónicos directos.
+// ======================================================*/}
+      <Seccion
+          id="emergencias"
+          titulo="Emergencias"
+          color={COLORES_SECCION.emergencia}
+          icono={<FaExclamationTriangle />}
+        > 
+{/*// ------------------------------------------------------
+// Genera automáticamente una tarjeta por cada servicio
+// de emergencia registrado.
+//
+// Arquitectura:
+// La interfaz se construye completamente a partir de los
+// datos, evitando componentes estáticos.
+// ------------------------------------------------------*/}
         {emergencias.map(emergencia => (
           <div
             key={emergencia.id}
             style={{              
-              backgroundColor: "#FFFFFF",
+              backgroundColor: COLORES.fondo,
               padding: "15px",
               marginBottom: "15px",
               borderRadius: "14px",
               boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-              borderTop: "4px solid ${COLOR_EMERGENCIA}"
+              borderTop: `4px solid ${COLORES_SECCION.emergencia}`
             }}
           >
             <strong
               style={{
-              fontSize: "18px",
-              color: "#333"}}
+              fontSize: TAMANOS.lg,
+              color: COLORES.subtitulo}}
             >{emergencia.nombre}</strong>
 
             <p>
@@ -915,24 +1863,40 @@ const totalResultados =
                   textDecoration: "none"
                 }}
               >
-                <FaPhoneAlt style={{ marginRight: "6px", color: COLOR_EMERGENCIA }}/> {emergencia.telefono}
+                <FaPhoneAlt style={{ marginRight: "6px", color: COLORES_SECCION.emergencia }}/> {emergencia.telefono}
               </a>
             </p>            
 
             {emergencia.direccion && (
-              <p><FaMapMarkedAlt style={{ marginRight: "6px", color: COLOR_EMERGENCIA }} />{emergencia.direccion}</p>
+              <p><FaMapMarkedAlt style={{ marginRight: "6px", color: COLORES_SECCION.emergencia }} />{emergencia.direccion}</p>
             )}
 
             {emergencia.horario && (
-              <p><FaClock style={{ marginRight: "6px", color: COLOR_EMERGENCIA }}/> {emergencia.horario}</p>
+              <p><FaClock style={{ marginRight: "6px", color: COLORES_SECCION.emergencia }}/> {emergencia.horario}</p>
             )}
           </div>
         ))}
-      </div>
+       </Seccion>
 
     </div> {/*aqui termina primer flex*/}
 
-    {/*Aca empieza flex que envuelve comercios y lugares*/}
+{/*// ======================================================
+// CONTENIDO PRINCIPAL
+//
+// Reúne los dos pilares informativos de QUILLÓN AHORA:
+//
+// - Comercios
+// - Lugares de Interés
+//
+// UX:
+// Ambos módulos comparten el mismo espacio visual por
+// representar las principales actividades que el usuario
+// puede realizar dentro de la comuna.
+//
+// Arquitectura:
+// Cada módulo mantiene su propia lógica de negocio,
+// compartiendo únicamente la estructura de distribución.
+// ======================================================*/}
       <div
         style={{
           display: "flex",
@@ -941,97 +1905,232 @@ const totalResultados =
           flexWrap: "wrap"
         }}
       >
-        {/*Aca empieza el bloque comercios 
-        debo corregir el boton ver detalles*/}
+{/*// ======================================================
+// COMERCIOS
+//
+// Permite explorar los comercios organizados por
+// categorías.
+//
+// Arquitectura:
+// El estado de apertura depende exclusivamente del
+// Motor de Horarios.
+//
+// UX:
+// Solo una categoría puede permanecer expandida al mismo
+// tiempo para reducir el desplazamiento vertical.
+// ====================================================== */}
         <div
           id="comercios"
           style={{
             flex: "1 1 350px",
-            backgroundColor: "#F3FBF4",
-            padding: "15px",
-            borderRadius: "12px",
-            scrollMarginTop: "80px"
+            backgroundColor:COLORES.fondo,
+             ...ESTILO_SECCION,
           }}
         >
-          <h2 style={{color:COLOR_COMERCIO,
-            marginBottom: "5px",
-            fontSize: "26px"
-           }}> 🟢Qué está abierto ahora</h2>
-          <p style={{color: COLOR_COMERCIO }}>{abiertos.length} comercios abiertos</p>
+          <h3
+          style={{
+                margin: 0,
+                marginBottom: "10px",
+                textAlign: "center"
+            }}
+          >🛍️ Comercios por Categoría</h3>
+          <p
+          style={{
+                margin: "8px 0 18px 0",
+                textAlign: "center"
+            }}
+          >Encuentra rápidamente lo que buscas</p>
 
-           {/*el toggle detalle hace que la tarjeta funcione como boton mostrando los datos ocultos */} 
-           {/*Evento on mouse hace que la tarjeta genere sombra al pasar el mouse por encima en la version web */}
-          {abiertos.map(comercio => (
-            <div
-              id={`comercio-${comercio.id}`}
-              onClick={() => toggleDetalleComercio(comercio.id)}
-              style={{cursor: "pointer"}}
-              key={comercio.id}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = "0 6px 12px rgba(0,0,0,0.15)";
-              }}                  
-                onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
-              }}
-              style={{
-                    backgroundColor: "#FFFFFF",
-                    padding: "15px",
-                    margin: "0 auto 10px auto",
+          <div
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px"
+            }}
+          >
+{/*// ------------------------------------------------------
+// Genera dinámicamente cada categoría de comercios.
+//
+// Arquitectura:
+// Las categorías no están definidas manualmente.
+// Se obtienen directamente desde los datos disponibles.
+// ------------------------------------------------------ */}
+            {categoriasUnicas.map((categoria) => {
+                const abierto = categoriaAbierta === categoria;
+             
+              return (
+                <div
+                   id={`categoria-${categoria}`}
+                   key={categoria}
+                  style={{
+                    width: "100%",
                     borderRadius: "14px",
-                    marginBottom: "15px",
-                    borderTop: "4px solid #2E7D32",
-                    textAlign: "left",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",                    
-                    transition: "all 0.2s ease",
-                    cursor: "pointer"
+                    border: "1px solid #e5e5e5",
+                    backgroundColor: COLORES.fondo,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)"
                   }}
-             >
-              <strong
-              style={{
-              fontSize: "18px",
-              color: "#333"}}
-              >{comercio.nombre}</strong>
-              <p style={{              
-              display: "block",
-              marginBottom: "8px"}}              
-              >{comercio.categoria}</p>         
-              <p><FaMapMarkedAlt style={{ marginRight: "6px", color: COLOR_COMERCIO }}/> {comercio.direccion}</p>
-              <p><FaCompass style={{ marginRight: "6px",color: COLOR_COMERCIO }}/> {comercio.referencia}</p>              
-              {detalleComercio === comercio.id && (
-                  <div>
-                    <p><FaPhoneAlt style={{ marginRight: "6px", color: COLOR_COMERCIO }}/> {comercio.telefono}</p>
-                    <p><FaClock style={{ marginRight: "6px", color: COLOR_COMERCIO }}/>{comercio.horario}</p>
+                >
+
+{/* // ------------------------------------------------------
+// CABECERA DE CATEGORÍA
+//
+// Permite expandir o contraer la categoría y muestra un
+// resumen del estado actual de los comercios.
+//
+// Indicadores:
+// 🟢 Comercios abiertos.
+// 🔴 Comercios cerrados.
+// ------------------------------------------------------*/}
+                  <div
+                    onClick={() =>
+                      toggleCategoria(categoria)
+                    }
+                    style={{
+                      cursor: "pointer",
+                      padding: "12px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: abierto ? "1px solid #eee" : "none",
+                      borderTop: abierto ? "4px solid #2E7D32" : "4px solid transparent",
+                      borderLeft: abierto ? "3px solid #2E7D32" : "4px solid transparent",
+                      backgroundColor: abierto ? "#F1F8E9" : "#ffffff",
+                      borderTopLeftRadius: "14px",
+                      borderTopRightRadius: "14px",
+                      fontWeight: 600
+                    }}
+                  >
+                    <span 
+                    style={{
+                        fontSize: TAMANOS.sm,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}>
+                      {abierto ? "▼" : "▶"} {obtenerIconoCategoria?.(categoria) ?? "📦"}{" "}
+                      {categoria}
+                    </span>
+
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: TAMANOS.xs,
+                        fontWeight: "700"
+                      }}
+                    >
+
+                      <span style={{ color: "#22C55E" }}>
+                        🟢 {estadoCategorias[categoria].abiertos}
+                      </span>
+
+                      <span style={{ color: "#EF4444" }}>
+                        🔴 {estadoCategorias[categoria].cerrados}
+                      </span>
+
+                    </span>
+
                   </div>
-              )}
-            </div>
-            ))
-        }
-     </div>
-        {/*Aca empieza el bloque lugares de interes*/}
+
+ {/* // ------------------------------------------------------
+// CONTENIDO DE LA CATEGORÍA
+//
+// Renderiza únicamente los comercios pertenecientes a la
+// categoría seleccionada.
+//
+// Arquitectura:
+// La representación visual se delega completamente al
+// componente TarjetaComercio.
+// ------------------------------------------------------ */}
+                      {abierto && (
+                      <div
+                        style={{
+                          backgroundColor: "#fff",
+
+                          marginLeft: "1px",
+
+                          paddingLeft: "1px",
+
+                          borderLeft: `3px solid ${COLORES_SECCION.comercio}`,
+
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px"
+                        }}
+                      >
+
+                    {comercios
+                      .filter((c) =>
+                        c.categoria
+                          .split("•")
+                          .map((x) => x.trim())
+                          .includes(categoria)
+                      )
+                      .map((comercio) => (
+
+                        <TarjetaComercio
+                                key={comercio.id}
+                                comercio={comercio}
+                                expandida={
+                                  tarjetasAbiertas[categoria]?.includes(comercio.id)
+                                }
+                                onClick={() => toggleTarjeta(categoria, comercio.id)}
+                              />
+
+                  ))}
+
+                  </div>
+                )}
+                </div>
+              );
+            })}
+        </div>
+
+           </div> 
+
+
+ {/*// ======================================================
+// LUGARES DE INTERÉS
+//
+// Presenta los principales atractivos turísticos y
+// recreativos de la comuna.
+//
+// UX:
+// Cada tarjeta funciona como un acordeón para mostrar
+// información adicional sin sobrecargar la interfaz.
+//
+// Arquitectura:
+// La información proviene íntegramente del módulo
+// lugares_de_interes.js.
+// ======================================================*/}
       <div
       id="lugares"
         style={{
           flex: "1 1 350px",
-          backgroundColor: "#F4FAFF",
-          padding: "15px",
-          borderRadius: "12px",
-          scrollMarginTop: "80px"
+          backgroundColor: COLORES.fondo,
+           ...ESTILO_SECCION,
         }}
       >
-        <h2 style={{color: COLOR_TURISMO,
+        <h2 style={{color: COLORES_SECCION.turismo,
         marginBottom: "5px",
         fontWeight: "700",
-        fontSize: "26px" }}        
+        fontSize: TAMANOS.xxl }}        
         > 🗺️ Lugares de Interes</h2>
         <p style={{color: "#666", 
-          fontSize: "18px",
+          fontSize: TAMANOS.lg,
           marginTop: 0
          }}
         > dentro de la comuna</p>
 
-{/*el toggle detalle hace que la tarjeta funcione como boton mostrando los datos ocultos */}
+{/*// ------------------------------------------------------
+// Genera automáticamente una tarjeta por cada lugar de
+// interés registrado.
+//
+// Arquitectura:
+// El contenido mostrado depende exclusivamente de los
+// datos disponibles.
+// ------------------------------------------------------ */}
         {lugaresInteres.map(lugar => (
           <div
             id={`lugar-${lugar.id}`}          
@@ -1048,16 +2147,19 @@ const totalResultados =
                 e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
               }}
             style={{              
-              backgroundColor: "#FFFFFF",
+              backgroundColor: COLORES.fondo,
               padding: "15px",
               marginBottom: "15px",
               borderRadius: "14px",
               textAlign: "left",
               boxShadow: "0 4px 12px rgba(0,0,0,0.08)",              
-              borderTop: "4px solid color: COLOR_TURISMO"
+              borderTop: `4px solid ${COLORES_SECCION.turismo}`
             }}
           >
-           
+{/*// Imagen representativa del lugar.
+//
+// UX:
+// Facilita el reconocimiento visual del destino. */}           
             <img
                     src={imagenesLugares[lugar.imagen]}
                     alt={lugar.nombre}
@@ -1072,7 +2174,7 @@ const totalResultados =
 
             <strong
               style={{
-              fontSize: "18px",
+              fontSize: TAMANOS.lg,
               color: "#333",
               display: "block",
               marginBottom: "8px"}}
@@ -1081,18 +2183,27 @@ const totalResultados =
             
 
             {lugar.direccion && (
-              <p><FaMapMarkedAlt style={{ marginRight: "6px",color: COLOR_TURISMO }}/> {lugar.direccion}</p>
+              <p><FaMapMarkedAlt style={{ marginRight: "6px",color: COLORES_SECCION.turismo }}/> {lugar.direccion}</p>
             )}
-
+{/*// ------------------------------------------------------
+// DETALLE DEL LUGAR
+//
+// Se muestra únicamente cuando el usuario expande la
+// tarjeta.
+//
+// Contenido:
+// - Descripción.
+// - Referencia.
+// ------------------------------------------------------*/}   
             {detalleLugar === lugar.id && (
               <div>
 
                 {lugar.descripcion && (
-                  <p> <FaInfoCircle style={{ marginRight: "6px", color: COLOR_TURISMO }} />{lugar.descripcion}</p>
+                  <p> <FaInfoCircle style={{ marginRight: "6px", color: COLORES_SECCION.turismo}} />{lugar.descripcion}</p>
                 )}
 
                 {lugar.referencia && (
-                  <p><FaCompass style={{ marginRight: "6px", color: COLOR_TURISMO }} /> {lugar.referencia}</p>
+                  <p><FaCompass style={{ marginRight: "6px", color: COLORES_SECCION.turismo }} /> {lugar.referencia}</p>
                 )}
 
               </div>
@@ -1102,62 +2213,68 @@ const totalResultados =
             
           </div>
         ))}
+     </div>
+  </div>     
+ 
 
-        </div>     
-  </div>
-
-    {/*Aca empieza bloque eventos activos dentro de la comuna*/}   
-          <div
-            id="eventos"
-              style={{
-                backgroundColor: "white",
-                padding: "15px",
-                borderRadius: "12px",
-                scrollMarginTop: "80px"
-              }}
+{/*// ======================================================
+// EVENTOS
+//
+// Presenta los eventos vigentes dentro de la comuna.
+//
+// UX:
+// Permite al usuario descubrir actividades disponibles
+// durante su visita o permanencia en Quillón.
+//
+// Arquitectura:
+// Actualmente utiliza datos estáticos.
+// En futuras versiones obtendrá la información desde el
+// módulo oficial de Eventos.
+// ======================================================*/}   
+            <Seccion
+                titulo="Eventos Activos"
+                color={COLORES_SECCION.evento}
+                icono="🎉"
             >
-              <h2 style={{color: "#F57C00" }}> 🎉 Eventos de hoy</h2>
+              
               <p>Fiesta de la Vendimia</p>
-            </div>   
+            </Seccion>
 
-    {/*Aca empieza bloque farmacias normal*/}        
-      <div
-        ref={farmaciasRef}
-        id="farmacias"
-        style={{
-          backgroundColor: "#F4FAFF",
-          padding: "15px",
-          paddingBottom: "50px",
-          borderRadius: "12px",
-          marginTop: "15px",
-          scrollMarginTop: "80px"
-        }}
-          >
-            <h2
-              style={{
-                color: COLOR_FARMACIA,
-                marginBottom: "20px"
-              }}
+{/*// ======================================================
+// FARMACIAS
+//
+// Catálogo completo de farmacias registradas en la comuna.
+//
+// Arquitectura:
+// Complementa el módulo "Farmacia de Turno",
+// permitiendo consultar cualquier farmacia disponible.
+//
+// UX:
+// Cada farmacia puede expandirse para mostrar
+// información adicional.
+// ======================================================*/}        
+      <Seccion
+              id="farmacias"
+              refSeccion={farmaciasRef}
+              titulo="Farmacias"              
+              color={COLORES_SECCION.farmacia}
+              icono={<FaMedkit style={{ color: COLORES_SECCION.farmacia }} />}
             >
-              <FaMedkit style={{ color: COLOR_FARMACIA }} /> Farmacias
-            </h2>
+{/*// ------------------------------------------------------
+// Genera automáticamente una tarjeta por cada farmacia.
+//
+// Arquitectura:
+// La representación utiliza el componente Tarjeta,
+// reutilizando el Design System.
+// ------------------------------------------------------*/}  
             {farmacias.map((farmacia) => (
-              <div
-                key={farmacia.id}
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  padding: "15px",
-                  marginBottom: "15px",
-                  borderRadius: "14px",
-                  textAlign: "left",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  borderTop: `4px solid ${COLOR_FARMACIA}`
-                }}
-              >
-                <>
+              <Tarjeta
+                    key={farmacia.id}
+                    color={COLORES_SECCION.farmacia}
+                  >                
                 <strong
                   style={{
-                    fontSize: "18px",
+                    fontSize: TAMANOS.lg,
                     color: "#333",
                     display: "block",
                     marginBottom: "10px"
@@ -1170,7 +2287,7 @@ const totalResultados =
                   <FaMapMarkedAlt
                     style={{
                       marginRight: "6px",
-                      color: COLOR_FARMACIA
+                      color: COLORES_SECCION.farmacia
                     }}
                   />
                   {farmacia.direccion}
@@ -1184,10 +2301,26 @@ const totalResultados =
                       textDecoration: "none"
                     }}
                   >
-                    <FaPhoneAlt style={{marginRight: "6px", color: COLOR_FARMACIA}}/> {farmacia.telefono || "No informado"}
+                    <FaPhoneAlt style={{marginRight: "6px", color: COLORES_SECCION.farmacia}}/> {farmacia.telefono || "No informado"}
                   </a>
                 </p>                
-
+{/*// ------------------------------------------------------
+// DESPLIEGUE DE DETALLE
+//
+// Permite mostrar u ocultar la información adicional
+// correspondiente a la farmacia seleccionada.
+// -----------------------------------------------------
+// // ------------------------------------------------------
+// INFORMACIÓN ADICIONAL
+//
+// Contiene:
+//
+// • Referencia.
+// • Horario habitual.
+//
+// Se muestra únicamente cuando la tarjeta se encuentra
+// expandida.
+// ------------------------------------------------------*/}
                 <div
                   onClick={() =>
                     setFarmaciaExpandida(
@@ -1200,8 +2333,8 @@ const totalResultados =
                     textAlign: "center",
                     marginTop: "10px",
                     cursor: "pointer",
-                    color: COLOR_FARMACIA,
-                    fontSize: "22px"
+                    color: COLORES_SECCION.farmacia,
+                    fontSize: TAMANOS.xl
                   }}
                 >
                   {farmaciaExpandida === farmacia.id ? (
@@ -1223,7 +2356,7 @@ const totalResultados =
                       <FaCompass
                         style={{
                           marginRight: "6px",
-                          color: COLOR_FARMACIA
+                          color: COLORES_SECCION.farmacia
                         }}
                       />
                       {farmacia.referencia}
@@ -1233,54 +2366,61 @@ const totalResultados =
                       <FaClock
                         style={{
                           marginRight: "6px",
-                          color: COLOR_FARMACIA
+                          color: COLORES_SECCION.farmacia
                         }}
                       />
                       {farmacia.horarioSemanal}
                     </p>
                   </div>
                 )}
-              </>
-              </div>
+              </Tarjeta>
             ))}
-          </div>
-{/*Aca empieza el modulo transportes, aloja taxis y buses  */}
-          <div
-          ref={transportesRef}
-          id="transportes"
-          style={{
-            backgroundColor: "#F8FBFF",
-            padding: "15px",
-            paddingBottom: "120px",
-            borderRadius: "12px",
-            marginTop: "15px",
-            scrollMarginTop: "80px"
-          }}
-          >
-          <h2
-          style={{
-            color: COLOR_TRANSPORTE,
-            marginBottom: "20px"
-          }}
-            >
-          <FaBus style={{ color: COLOR_TRANSPORTE }} /> Transportes
-        </h2>
+      </Seccion>
+
+{/*// ======================================================
+// TRANSPORTES
+//
+// Centraliza la información de movilidad de la comuna.
+//
+// Módulos:
+//
+// • Taxis.
+// • Buses.
+//
+// Arquitectura:
+// El cálculo de horarios depende del Motor de Tiempo,
+// mientras que la información proviene de los módulos
+// transportes_taxis.js y transportes_buses.js.
+// ====================================================== */}
+          <Seccion
+                id="transportes"
+                refSeccion={transportesRef}
+                titulo="Transportes"
+                color={COLORES_SECCION.transporte}
+                icono={<FaBus style={{ color: COLORES_SECCION.transporte }} />}
+              >
         <h3>
-          <FaTaxi style={{ color: COLOR_TRANSPORTE }} /> Taxis
+          <FaTaxi style={{ color: COLORES_SECCION.transporte }} /> Taxis
         </h3>
-        {/* INICIO BLOQUE TAXIS */}
+ {/* // ------------------------------------------------------
+// TAXIS
+//
+// Presenta los servicios de taxi disponibles,
+// priorizando el acceso telefónico inmediato.
+// ------------------------------------------------------ */}
         {taxis.map((taxi) => (
           <div
             key={taxi.id}
             style={{
-              backgroundColor: "#FFFFFF",
+              backgroundColor: COLORES.fondo,
               padding: "15px",
               marginBottom: "10px",
               borderRadius: "12px",
-              borderTop: `4px solid ${COLOR_TRANSPORTE}`,
+              borderTop: `4px solid ${COLORES_SECCION.transporte}`,
               boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
             }}
           >
+             {/* // Genera una tarjeta por cada servicio de taxi registrado.*/}
             <strong>{taxi.nombre}</strong>            
               <p>
                 <a
@@ -1290,40 +2430,66 @@ const totalResultados =
                     textDecoration: "none"
                   }}
                 >
-                  <FaPhoneAlt style={{ color: COLOR_TRANSPORTE }}/> {taxi.telefono}
+                  <FaPhoneAlt style={{ color: COLORES_SECCION.transporte }}/> {taxi.telefono}
                 </a>
               </p>
-              {/* {taxi.telefono}*/}
+             
             
           </div>
         ))}
         {/* TERMINO BLOQUE TAXIS */}
 
-        {/* BLOQUE BUSES */}
+{/* // ------------------------------------------------------
+// BUSES
+//
+// Presenta los recorridos interurbanos disponibles.
+//
+// Arquitectura:
+//
+// Utiliza el Motor de Tiempo para:
+//
+// • determinar el día actual;
+// • calcular la próxima salida;
+// • calcular el tiempo restante.
+//
+// Cada recorrido mantiene sus propios horarios,
+// organizados por tipo de día.
+// ------------------------------------------------------*/}
        <h3 style={{ marginTop: "25px" }}>
-          <FaBus style={{ color: COLOR_TRANSPORTE }} /> Buses
+          <FaBus style={{ color: COLORES_SECCION.transporte }} /> Buses
         </h3>
         {buses.map((bus) => (
           <div
             key={bus.id}
             style={{
-              backgroundColor: "#FFFFFF",
+              backgroundColor: COLORES.fondo,
               padding: "15px",
               marginBottom: "15px",              
               borderRadius: "12px",
-              borderTop: `4px solid ${COLOR_TRANSPORTE}`,
+              borderTop: `4px solid ${COLORES_SECCION.transporte}`,
               boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
             }}          
           >
             <strong
             style={{
-                fontSize: "18px",
-                color: COLOR_TRANSPORTE,
+                fontSize: TAMANOS.lg,
+                color: COLORES_SECCION.transporte,
                 display: "block",
                 marginBottom: "8px"
               }}
           >
-            {bus.nombre} {/*Aca toma el nombre de la ruta de los buses (Quillón - Chillan o Quillón - Concepcion) */}
+ {/*// ------------------------------------------------------
+// DETALLE DEL RECORRIDO
+//
+// Permite consultar:
+//
+// • Próxima salida.
+// • Tiempo restante.
+// • Horarios de ida.
+// • Horarios de vuelta.
+// • Horarios de otros días.
+// ------------------------------------------------------ */}
+            {bus.nombre} 
           </strong>
           <div
               onClick={() =>
@@ -1349,20 +2515,20 @@ const totalResultados =
                   <p>
                     <strong
                     style={{
-                      backgroundColor: "#FFF8E1",
+                      backgroundColor: COLORES.fondo_destacado,
                       padding: "10px",
                       borderRadius: "10px",
                       marginBottom: "12px"
                     }}
                     >
                       ⭐ Hoy: {nombreDiaActual} 
-                      {/*nombreDiaActual tiene la logica arriba 
-                      en los const busca el dia actual para mostrarlo */}
+{/*// Horarios de días no vigentes.
+// Se muestran bajo demanda para reducir la carga visual. */}
                     </strong>
                   </p>
                   <div
                       style={{
-                        backgroundColor: "#E8F5E9",
+                        backgroundColor: COLORES.fondoSalidaBus,
                         padding: "12px",
                         borderRadius: "16px",
                         marginTop: "12px",
@@ -1373,7 +2539,7 @@ const totalResultados =
 
                       <div
                         style={{
-                          fontSize: "24px",
+                          fontSize: TAMANOS.xl,
                           fontWeight: "bold",
                           marginTop: "6px"
                         }}
@@ -1385,7 +2551,7 @@ const totalResultados =
                         }
                         <div
                           style={{
-                            fontSize: "14px",
+                            fontSize: TAMANOS.sm,
                             marginTop: "8px",
                             opacity: 0.8
                           }}
@@ -1546,9 +2712,23 @@ const totalResultados =
 
           </div>
         ))} {/*Aqui termina seccion buses */}
-  </div>    {/*este div se queda, es de arriba no de buses */}  
+ </Seccion>   
+  {/*este seccion se queda, es de arriba, no de buses */}  
               
-{/*Menu boton Más de la barra de navegacion */}
+{/*// ======================================================
+// MENÚ SECUNDARIO
+//
+// Presenta accesos rápidos a módulos de menor frecuencia
+// de uso que no forman parte de la navegación principal.
+//
+// UX:
+// Permite mantener una barra inferior simple sin perder
+// acceso a funcionalidades adicionales.
+//
+// Arquitectura:
+// El contenido del menú podrá crecer conforme se
+// incorporen nuevos módulos.
+// ====================================================== */}
               {mostrarMas && (
                 <div
                   style={{
@@ -1562,8 +2742,9 @@ const totalResultados =
                     zIndex: 1000
                   }}
                 >
+                   {/*// Acceso directo al módulo Farmacias. */}  
                   <p
-                  onClick={() => {scrollSuave("farmacias");
+                  onClick={() => {navegarASeccion("farmacias");
                                   setMostrarMas(false);
                                 }}
                     style={{
@@ -1573,12 +2754,13 @@ const totalResultados =
                       margin: "8px 0"
                     }}
                   >
-                    <FaMedkit style={{ color: COLOR_FARMACIA }} />
+                    <FaMedkit style={{ color: COLORES_SECCION.farmacia }} />
                     Farmacias
                   </p>
+                   {/*// Acceso directo al módulo Transportes. */}  
                   <p
                   onClick={() => {
-                                  scrollSuave("transportes");
+                                  navegarASeccion("transportes");
                                   setMostrarMas(false);
                                 }}
                     style={{
@@ -1588,28 +2770,45 @@ const totalResultados =
                       margin: "8px 0"
                     }}                  
                   >
-                      <FaTaxi style={{color: COLOR_TRANSPORTE}}/> Transportes
+                      <FaTaxi style={{color: COLORES_SECCION.transporte}}/> Transportes
                   </p>
+                  {/*// Acceso reservado para el módulo Eventos. */}  
                   <p
                     style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
                         margin: "8px 0"
-                      }}><FaGlassCheers style={{color: COLOR_EVENTO}}/> Eventos
+                      }}><FaGlassCheers style={{color: COLORES_SECCION.evento}}/> Eventos
                   </p>
                 </div>
               )}
 
-{/* Aqui empieza la barra inferior
-con los botones de navegacion tipo app */}
+{/* // ======================================================
+// BARRA DE NAVEGACIÓN PRINCIPAL
+//
+// Principal mecanismo de navegación de QUILLÓN AHORA.
+//
+// UX:
+//
+// Mantiene acceso permanente a los módulos principales
+// desde cualquier punto de la aplicación.
+//
+// Arquitectura:
+//
+// La navegación se realiza mediante desplazamiento suave
+// hacia las secciones correspondientes.
+//
+// Mobile First:
+// Diseñada prioritariamente para teléfonos móviles.
+// ====================================================== */}
             <div            
                 style={{
                   position: "fixed",
                   bottom: 0,
                   left: 0,
                   width: "100%",
-                  backgroundColor: "white",
+                  backgroundColor: COLORES.fondo,
                   display: "flex",
                   justifyContent: "space-around",
                   alignItems: "center",
@@ -1622,101 +2821,107 @@ con los botones de navegacion tipo app */}
                   WebkitTouchCallout: "none",
                 }}
               >
+                {/*// Inicio */} 
               <div
-                onClick={() => scrollSuave("inicio")}
+                onClick={() => navegarASeccion("inicio")}
                 style={{
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       cursor: "pointer",
-                      fontSize: "30px"
+                      fontSize: TAMANOS.ovz
                        }}
                 ><FaHome color="#1976D2"/>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: "15px",
+                    fontSize: TAMANOS.md,
                   }}
                 >
                   Inicio
                 </p>
               </div>
+              {/*// Emergencias */} 
               <div
-                onClick={() => scrollSuave("comercios")}
+                onClick={() => navegarASeccion("emergencias")}
                 style={{
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       cursor: "pointer",
-                      fontSize: "30px"
-                       }}        
-                ><FaStore style={{ marginRight: "6px", color:"#2E7D32"}}/>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "15px",
-                  }}
-                >
-                  Comercio
-                </p>
-              </div>
-              <div
-                onClick={() => scrollSuave("lugares")}
-                style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      fontSize: "30px"
-                       }}                  
-                ><FaMapMarkedAlt color="#26A69A"/>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "15px",
-                  }}
-                >
-                  Lugares
-                </p>
-              </div>
-              <div
-                onClick={() => scrollSuave("emergencias")}
-                style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      fontSize: "30px"
+                      fontSize: TAMANOS.ovz
                        }}      
                 
                 ><FaExclamationTriangle color="#D32F2F"/>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: "15px",
+                    fontSize: TAMANOS.md,
                   }}
                 >
                   Emergencias
                 </p>
                 </div>
-
-                <div
-                onClick={() => scrollSuave("emergencias"),
-                         () => setMostrarMas(!mostrarMas)
-                }
+              
+              {/*// Comercios */} 
+              <div
+                onClick={() => navegarASeccion("comercios")}
                 style={{
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       cursor: "pointer",
-                      fontSize: "30px"
+                      fontSize: TAMANOS.ovz
+                       }}        
+                ><FaStore style={{ marginRight: "6px", color:COLORES_SECCION.comercio}}/>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: TAMANOS.md,
+                  }}
+                >
+                  Comercio
+                </p>
+              </div>
+              {/*// Lugares */} 
+              <div
+                onClick={() => navegarASeccion("lugares")}
+                style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      fontSize: TAMANOS.ovz
+                       }}                  
+                ><FaMapMarkedAlt color="#26A69A"/>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: TAMANOS.md,
+                  }}
+                >
+                  Lugares
+                </p>
+              </div>
+              
+              {/*// Más */} 
+                <div
+                onClick={() => {
+                        setMostrarMas(prev => !prev);
+                      }}
+                style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      fontSize: TAMANOS.ovz
                        }}      
                 
                 ><FaBars  color="#000000"/>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: "15px",
+                    fontSize: TAMANOS.md,
                   }}
                 >
                   Más
@@ -1724,6 +2929,26 @@ con los botones de navegacion tipo app */}
                 </div>
               </div>
 
+ {/*// ======================================================
+// BRÚJULA
+//
+// Botón flotante contextual.
+//
+// UX:
+//
+// Permite acceder rápidamente al elemento principal de la
+// sección actualmente visible.
+//
+// Arquitectura:
+//
+// El contenido mostrado depende del Observador de
+// Navegación y del contexto activo.
+//
+// Futuro:
+//
+// Evolucionará hacia un sistema de navegación contextual
+// inteligente.
+// ======================================================*/} 
              <div
              onClick={irADestacado}
               style={{                
@@ -1736,58 +2961,118 @@ con los botones de navegacion tipo app */}
               >
                   <div
                     style={{
-                      backgroundColor: COLOR_EVENTO,
+                      backgroundColor: COLORES_SECCION.evento,
                       color: "white",
                       borderRadius: "30px",
                       padding: "10px 14px",
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
+                      gap: brujulaContraida ? "0px" : "8px",
+                      width: brujulaContraida ? "20px" : "auto",
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
                       boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-                      fontWeight: "600"
+                      fontWeight: "600",
+                      transition:
+                        "width 300ms ease, gap 300ms ease, padding 300ms ease"
                     }}
                   >
-                    <FaCompass />                    
+{/*// Muestra el elemento destacado correspondiente
+// a la sección actualmente activa.*/}
+                    <FaCompass
+                        size={20}
+                        style={{
+                          color: "white",
+                          minWidth: "20px",
+                          flexShrink: 0
+                        }}
+                      />                    
                   
-                    {/*mostrarTexto && (*/}
-                      <span>{textoBrujula()}</span>
-                     {/*)}*/ }
+                   
+                      <span
+                        style={{
+                              opacity: brujulaContraida ? 0 : 1,
+                              transition: "opacity 180ms ease",
+                              overflow: "hidden"
+                          }}
+                      >{textoBrujula()}</span>
+                    
                   </div>
               </div>
+
+
+{/*// ======================================================
+// FOOTER
+//
+// Cierre institucional de QUILLÓN AHORA.
+//
+// Contenido:
+//
+// • Canal oficial de contacto.
+// • Invitación a colaborar reportando errores.
+// • Aviso legal.
+// • Versión de la aplicación.
+//
+// UX:
+// Finaliza la experiencia manteniendo un canal abierto
+// de comunicación con la comunidad.
+// ======================================================*/}
+              
               <footer
                 style={{
                   marginTop: "40px",
                   padding: "20px",
                   textAlign: "center",
-                  fontSize: "14px", 
+                  fontSize: TAMANOS.sm, 
                   paddingBottom: "120px",
                   color: "#666"
                 }}
               >
+
+{/*// Canal oficial de contacto.
+//
+// Arquitectura:
+// Centraliza la recepción de sugerencias, correcciones
+// y comentarios enviados por los usuarios. */} 
                 <a
                     href="mailto:contacto@quillonahora.cl"
                     style={{
                       color: "inherit"
                     }}
                   >
-                   📧 contacto@quillonahora.cl
+                   📧 quillonahora@gmail.com
                   </a>
 
+{/*// Invitación a la participación ciudadana.
+//
+// Filosofía:
+//
+// QUILLÓN AHORA evoluciona continuamente gracias a la
+// colaboración de la comunidad. */} 
                 <p>
                   ¿Encontraste información incorrecta o tienes una sugerencia?
                   Escríbenos.
                 </p>
-
+{/*// Aviso legal.
+//
+// Los nombres comerciales y marcas pertenecen a sus
+// respectivos propietarios y se utilizan únicamente con
+// fines informativos. */} 
                 <p
                 style={{
-                    fontSize: "12px",
+                    fontSize: TAMANOS.xs,
                     color: "#777",
                     fontStyle: "italic",
                     marginTop: "15px"}}
                   >Los nombres comerciales y marcas mencionados pertenecen 
                   a sus respectivos propietarios y se utilizan únicamente 
                   con fines informativos y de orientación para la comunidad.</p>
-
+{/*// Identificación de la versión actualmente desplegada.
+//
+// TODO Arquitectura:
+// En futuras versiones deberá obtenerse desde una
+// constante global (config/version.js) para evitar
+// actualizaciones manuales. */} 
                 <p>
                   QUILLÓN AHORA v0.4.0 Beta
                 </p>
