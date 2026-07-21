@@ -1,0 +1,89 @@
+/* =====================================================
+   HERO GREETING
+   ===================================================== */
+
+.hero-greeting {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    z-index: 2;
+
+}
+
+.hero-greeting h2 {
+
+    margin: 0;
+
+    font-size: 2rem;
+
+    font-weight: 700;
+
+    transition:
+
+        color .45s ease,
+
+        text-shadow .45s ease,
+
+        opacity .45s ease,
+
+        transform .45s ease;
+
+}
+
+.hero-greeting p {
+
+    margin: 0;
+
+    font-size: 1rem;
+
+    transition:
+
+        color .45s ease,
+
+        opacity .45s ease,
+
+        transform .45s ease;
+
+}
+
+/* =====================================================
+   MOVIMIENTO AMBIENTAL
+   ===================================================== */
+
+.hero-greeting.breathing {
+
+    animation: heroBreath 1.2s ease-in-out;
+
+}
+
+@keyframes heroBreath {
+
+    0% {
+
+        transform: translateY(0) scale(1);
+
+        opacity: 1;
+
+    }
+
+    40% {
+
+        transform: translateY(-2px) scale(1.01);
+
+        opacity: .97;
+
+    }
+
+    100% {
+
+        transform: translateY(0) scale(1);
+
+        opacity: 1;
+
+    }
+
+}

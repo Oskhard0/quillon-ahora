@@ -1,0 +1,142 @@
+.radial-button{
+
+    width:72px;
+
+    height:72px;
+
+    z-index:10;
+
+    border:none;
+
+    border-radius:50%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    cursor:pointer;
+
+    color:white;
+
+    transition:all .25s ease;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.18);
+
+    border:2px solid rgba(255,255,255,.20);
+
+}
+
+.radial-button.absolute{
+
+    position:absolute;
+
+}
+
+.radial-icon{
+
+    font-size:30px;
+
+}
+
+.radial-button:hover{
+
+    transform:translateY(-4px) scale(1.05);
+
+    transform:translateY(-4px) scale(1.05);
+
+    box-shadow:0 14px 28px rgba(0,0,0,.25);
+
+}
+
+.radial-button:active{
+
+    transform:scale(.94);
+
+}
+
+.radial-button:focus{
+
+    outline:none;
+
+}
+
+.radial-menu{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:40px;
+
+    align-items:center;
+
+    padding-top:0px;
+
+    padding-bottom:40px;
+
+}
+
+.radial-container{
+
+    position:relative;
+
+    width:352px;
+
+    height:352px;
+
+    margin:0;
+
+    
+
+
+}
+
+/* Norte */
+.radial-button.pos1{
+    left:140px;
+    top: 00px;
+}
+
+.radial-button.pos2{
+    left:233px;
+    top:47px;
+}
+
+/* Este */
+.radial-button.pos3{
+    left:280px;
+    top:140px;
+}
+
+.radial-button.pos4{
+    left:233px;
+    top:233px;
+}
+
+/* Sur */
+.radial-button.pos5{
+    left:140px;
+    top:280px;
+}
+
+.radial-button.pos6{
+    left:47px;
+    top:233px;
+}
+
+/* Oeste */
+.radial-button.pos7{
+    left:-10px;
+    top:140px;
+}
+
+.radial-button.pos8{
+    left:47px;
+    top:47px;
+}
+
+
+
+

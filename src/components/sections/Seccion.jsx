@@ -4,6 +4,7 @@ import { ESTILO_SECCION } from "../../styles/componentes";
 import { TAMANOS, GROSOR } from "../../styles/tipografia";
 import { ESPACIADO } from "../../styles/espaciado";
 
+
 function Seccion({
   id,
   refSeccion,
@@ -14,6 +15,7 @@ function Seccion({
 }) {
   return (
     <div
+      className="seccion"
       id={id}
       ref={refSeccion}
       style={{
@@ -22,6 +24,7 @@ function Seccion({
       }}
     >
       <h2
+      className="seccion-titulo"
           style={{
             color,
             fontSize: TAMANOS.xl,

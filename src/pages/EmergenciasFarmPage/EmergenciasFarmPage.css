@@ -1,0 +1,86 @@
+/* ==========================================
+   EXPERIENCIA EMERGENCIAS
+========================================== */
+
+.emergencias-page {
+
+    --accent: #D32F2F;
+    --accent-soft: rgba(211, 47, 47, 0.08);
+
+}
+
+/* Hero */
+
+.emergencias-page .hero-overlay{
+
+    background:linear-gradient(
+
+        to bottom,
+
+        rgba(0,0,0,.25),
+
+        rgba(0,0,0,.78)
+
+    );
+
+}
+
+.emergencias-page .hero h1{
+
+    font-weight:800;
+
+    letter-spacing:.5px;
+
+    margin-bottom:24px;
+
+}
+
+.emergencias-page .hero p{
+
+    font-size:1.06rem;
+
+    line-height:1.5;
+
+    opacity:.92;
+
+    white-space: pre-line;
+
+}
+
+.emergencias-page .experience-frame{
+
+    border: 10px solid transparent;
+
+    background:
+        linear-gradient(#FFFFFF,#FFFFFF) padding-box,
+
+        linear-gradient(
+            135deg,
+            #7A0000,
+            #C62828,
+            #E53935,
+            #C62828,
+            #7A0000
+        ) border-box;
+
+    box-shadow:
+        inset 0 2px 3px rgba(255,255,255,.25),
+        0 10px 30px rgba(120,0,0,.18);
+
+}
+
+
+
+.emergencias-page h2{
+
+    color:#B71C1C;
+
+}
+
+.emergencias-page .seccion-titulo{
+
+    border-bottom:3px solid #D32F2F;
+
+    padding-bottom:8px;
+
+}

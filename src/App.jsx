@@ -15,6 +15,12 @@
 // App.jsx aún contiene lógica en proceso de extracción,
 // manteniendo siempre el Estado Verde del proyecto.
 // ======================================================
+import Hero from "./components/hero";
+import SearchBar from "./components/search";
+import NextDepartures from "./components/departures";
+import FeaturedCarousel from "./components/featured";
+import RadialMenu from "./components/radial/RadialMenu";
+import CompassHub from "./components/compass";
 import { useState, useEffect, useRef } from "react";
 import Seccion from "./components/sections/Seccion.jsx";
 import Tarjeta from "./components/ui/Tarjeta.jsx";
@@ -66,7 +72,9 @@ import {
   } from "react-icons/fa"; //*Aca se declaran los iconos react que se necesitan, si faltan se agregan a la lista.
 
   //*Inicio de app, aqui van todas las constantes o funciones 
-function App() {  
+function App({ navegar })  {  
+
+console.log("App recibió navegar:", navegar);
 // ======================================================
 // DESTACADOS AHORA
 //
@@ -273,7 +281,7 @@ const obtenerMinutosRestantes = (horaSalida) => {
   const [busExpandido, setBusExpandido] = useState(null);
   const [diaExpandido, setDiaExpandido] = useState(null); // TODO Auditoría Verificar si este estado continúa utilizándose.
   const [horarioExpandido, setHorarioExpandido] = useState(null);
-
+ 
 
 // ======================================================
 // DATOS DERIVADOS
@@ -289,6 +297,13 @@ const obtenerMinutosRestantes = (horaSalida) => {
   farmacia => farmacia.id === farmaciaTurno.farmaciaId
 )  || {};
 
+const destacados = comercios
+
+    .filter(comercio => comercio.destacado)
+
+    .sort((a,b)=>a.prioridad-b.prioridad);
+
+
 const proximoBusChillan =
 buses.find(
     bus => bus.ruta === "Quillón - Chillán"
@@ -298,6 +313,10 @@ const proximoBusConcepcion =
 buses.find(
     bus => bus.ruta === "Quillón - Concepción"
 );
+
+
+ 
+
 
 // ======================================================
 // NAVEGACIÓN
@@ -431,6 +450,7 @@ const navegarASeccion = (id) => {
   const [seccionActual, setSeccionActual] = useState("inicio"); //Brújula.
   const [brujulaContraida, setBrujulaContraida] = useState(false);//Brújula.
   const [destinoScroll, setDestinoScroll] = useState(null);
+  const inputBusquedaRef = useRef(null); //elimina teclado de pantalla post enter
 
 // ======================================================
 // BÚSQUEDA / MOTOR DE INTENCIONES
@@ -620,7 +640,7 @@ function ejecutarAccion(accion) {
   };
 
   
-  // ======================================================
+// ======================================================
 // MOTOR DE BÚSQUEDA
 //
 // Genera los resultados de búsqueda para los distintos
@@ -697,6 +717,40 @@ const salidaConcepcion =
 const minutosConcepcion =
   obtenerMinutosRestantes(salidaConcepcion);
 
+
+const salidas = [
+{
+    destino: "chillan",
+
+    titulo: "Chillán",
+
+    tiempo: obtenerProximaSalida(
+        proximoBusChillan.horarios[claveDiaActual].ida
+    ),
+
+    minutos: minutosChillan
+},
+
+{
+    destino: "concepcion",
+
+    titulo: "Conce",
+
+    tiempo: obtenerProximaSalida(
+        proximoBusConcepcion.horarios[claveDiaActual].ida
+    ),
+
+    minutos: minutosConcepcion
+},
+
+{
+    destino: "santiago",
+    titulo: "Stgo",
+    minutos: 999,
+    tiempo: "Pronto"
+},
+
+];
 // ======================================================
 // ELEMENTOS PRINCIPALES
 //
@@ -744,6 +798,7 @@ const lugarDestacado =
 // Devuelve el texto mostrado por la Brújula según la
 // sección actualmente visible.
 // ------------------------------------------------------
+
   const textoBrujula = () => {
   if (seccionActual === "comercios")
     return comercioDestacado?.nombre;
@@ -751,6 +806,7 @@ const lugarDestacado =
     return lugarDestacado?.nombre;
   return "Recomendado por QA";
   };
+ 
 // TODO Auditoría
 // Actualizar el texto por defecto de la Brújula tras la
 // eliminación de la categoría "Abierto ahora".
@@ -761,7 +817,8 @@ const lugarDestacado =
 // Reúne los elementos utilizados por la Brújula para la
 // navegación contextual, descartando referencias nulas.
 // ======================================================
-  const destacados = [comercioDestacado, lugarDestacado].filter(Boolean);
+ const elementosBrujula =
+    [comercioDestacado, lugarDestacado].filter(Boolean);
 // TODO Auditoría
 // Revisar la nomenclatura cuando la Brújula evolucione
 // hacia el Módulo de Navegación Inteligente.
@@ -1124,108 +1181,88 @@ useEffect(() => {
 // ======================================================
 
   return (
-    // Sección inicial utilizada como punto de referencia para
-      // la navegación principal de la aplicación.
+    
+
+    <>
+    <Hero />
+  {/*// Sección inicial utilizada como punto de referencia para
+      // la navegación principal de la aplicación.*/}
     <div
+      id="inicio"
       style={{
         minHeight: "100vh",
         backgroundColor: COLORES.fondo,
         fontFamily: "'Segoe UI', sans-serif",
-        padding: "12px",
+        padding: "0px",
         overflowX: "hidden"
       }}
     >
       
-      <header
-      id="inicio"
-        style={{
-          background: GRADIENTES.principal,
-          color: "white",
-          padding: "35px",
-          borderRadius: "18px",
-          boxShadow: "0 8px 20px rgba(0,0,0,0.15)"
-        }}
-      >
-        <header>
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "10px"
-    }}
-  >
-    <img
-      src={logoQuillon}
-      alt="Logo Quillón Ahora"
-      style={{
-        width: "250px",
-        height: "250px",
-        objectFit: "contain",
-      }}
-    />
-      {/* ======================================================
-          HERO
-      ====================================================== */}
-    <div>
-      
-      <h1
-        style={{
-        margin: "0",
-        fontSize: "clamp(32px, 6vw, 42px)",
-        textAlign: "center",
-        lineHeight: "1.1",
-  }}
-      >
-        Quillón Ahora
-      </h1>
-      
-      <div
-        style={{
-          backgroundColor: COLORES.fondo,
-          color: COLORES.texto,
-          padding: "10px",
-          borderRadius: "10px",
-          marginTop: "10px",
-          marginBottom: "20px",
-          fontSize: TAMANOS.sm,
-          textAlign: "center"
-        }}
-      >
-        {/* Aviso Beta */}
-          <p>🚧 QUILLÓN AHORA🚧</p>
-          se encuentra en fase de pruebas.
-          La información publicada puede contener errores u omisiones.
-          <p display= "inline-block" >El sitio está optimizado para ser visto desde un celular o tablet</p>
-      </div>
+{/* / ======================================================
+// BUSCADOR GLOBAL
+//
+// Punto de entrada del Motor de Búsqueda.
+//
+// UX:
+// Permite al usuario localizar rápidamente información
+// relevante sin navegar manualmente por los módulos.
+//
+// Arquitectura:
+// Actualmente consulta módulos independientes
+// (Comercios, Farmacias, Transportes).
+//
+// En una futura versión evolucionará hacia el
+// Motor de Búsqueda Unificado.
+// ======================================================
+*/}
 
-      <p
-        style={{
-        margin: "5px 0 0 0",
-        textAlign: "center",
-        maxWidth: "320px",
-        lineHeight: "1.4",
-        opacity: "0.9",
-       fontSize: "clamp(14px, 2.5vw, 18px)",
-       opacity: "0.9"
-  }}
-  // Mensaje que resume la filosofía de QUILLÓN AHORA.
-      >
-        La app del vecino que sabe
-      </p>
-      
-    </div>
-  </div>
-  
-</header>
-</header>
+{/* Campo de búsqueda */}
+<SearchBar
+
+    value={busqueda}
+
+    placeholder="¿Qué necesitas hoy?"
+
+    inputRef={inputBusquedaRef}
+
+    onChange={setBusqueda}
+
+    onKeyDown={(e)=>{
+
+        if(e.key==="Enter"){
+
+            e.preventDefault();
+
+            setTimeout(()=>{
+
+                inputBusquedaRef.current?.blur();
+
+            },50);
+
+        }
+
+    }}
+
+/>
+{/* ======================================================
+    PROXIMAS SALIDAS DE BUSES
+
+    Reúne la información de las salidas más proximas a la hora en actual.
+====================================================== */}
+
+<NextDepartures
+        salidas={salidas}
+        onDestinoClick={(destino) => console.log(destino)}
+    />
+
+     
 {/* ======================================================
     CENTRO DE INFORMACIÓN INMEDIATA
 
     Reúne la información más importante para el usuario
     al ingresar a QUILLÓN AHORA.
 ====================================================== */}
-
+{false && (
 <div
   style={{
     backgroundColor: "#FFF8E1",
@@ -1355,7 +1392,7 @@ useEffect(() => {
 </div>
   
 </div>
-
+)}
 {/* ======================================================
     BRÚJULA · ACCESOS PRINCIPALES
 
@@ -1366,6 +1403,7 @@ useEffect(() => {
     Permite al usuario descubrir contenido relevante
     con un solo toque.
 ====================================================== */}
+{false && (
 <div
           style={{
              ...ESTILO_SECCION,
@@ -1424,28 +1462,10 @@ useEffect(() => {
 
             </p>
 </div>
+)}
 
 
-{/* / ======================================================
-// BUSCADOR GLOBAL
-//
-// Punto de entrada del Motor de Búsqueda.
-//
-// UX:
-// Permite al usuario localizar rápidamente información
-// relevante sin navegar manualmente por los módulos.
-//
-// Arquitectura:
-// Actualmente consulta módulos independientes
-// (Comercios, Farmacias, Transportes).
-//
-// En una futura versión evolucionará hacia el
-// Motor de Búsqueda Unificado.
-// ======================================================
-*/}
-
-{/* Campo de búsqueda */}
-      <div
+    {/*<div
         style={{
           marginTop: "20px",
           backgroundColor: "white",
@@ -1454,10 +1474,22 @@ useEffect(() => {
         }}
       >
         <input
+          ref={inputBusquedaRef}
           type="text"
-          placeholder="🔍 Buscar comercio, evento o lugar..."
+          placeholder="🔍 Que buscas??..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
+
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+
+              setTimeout(() => {
+                inputBusquedaRef.current?.blur();
+              }, 50);
+            }
+          }}
+
           style={{
             width: "100%",
             padding: "12px",
@@ -1465,7 +1497,7 @@ useEffect(() => {
             boxSizing: "border-box"
           }}
         />
-      </div>
+      </div>*/}
       
 
       {busqueda && (
@@ -1546,6 +1578,8 @@ useEffect(() => {
                 onClick={() => toggleDetalleComercio(comercio.id)}
               />
             ))}
+
+
 
  {/*// ------------------------------------------------------
 // RESULTADOS · FARMACIAS
@@ -1686,6 +1720,31 @@ useEffect(() => {
         </div> 
       )}
 {/*Div final del buscador */}
+
+{/* ======================================================
+    CARRUSEL DE DESTACADOS
+
+    Aca se anuncian los comercios, eventos y/o lugares destacados
+    los comercios aca mostrados serán aquellos que moneticen su aviso.
+====================================================== */}
+<FeaturedCarousel
+
+    destacados={destacados}
+
+/>
+{/* ======================================================
+
+    BRÚJULA DE NAVEGACIÓN
+
+    Muestra las ocho macrocategorías principales.
+
+    La navegación es administrada por
+    ExperienceRouter.
+
+====================================================== */}
+
+<RadialMenu navegar={navegar} />
+
 
 {/*// ======================================================
 // INFORMACIÓN CRÍTICA
@@ -2949,6 +3008,7 @@ useEffect(() => {
 // Evolucionará hacia un sistema de navegación contextual
 // inteligente.
 // ======================================================*/} 
+{false && (
              <div
              onClick={irADestacado}
               style={{                
@@ -2999,6 +3059,7 @@ useEffect(() => {
                     
                   </div>
               </div>
+              )}
 
 
 {/*// ======================================================
@@ -3078,6 +3139,7 @@ useEffect(() => {
                 </p>
               </footer>
     </div>
+    </>
   );
 }
 

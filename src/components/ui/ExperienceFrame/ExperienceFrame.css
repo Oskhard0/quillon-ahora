@@ -1,0 +1,78 @@
+/* ==========================================================
+   EXPERIENCE FRAME
+   ==========================================================
+
+   RESPONSABILIDAD
+   ----------------------------------------------------------
+   ExperienceFrame define únicamente la ESTRUCTURA común de
+   todas las experiencias de QUILLÓN AHORA.
+
+   Debe proporcionar:
+
+   ✔ Contenedor principal.
+   ✔ Espaciado interno.
+   ✔ Bordes redondeados.
+   ✔ Sombra común del sistema.
+   ✔ Comportamiento responsive.
+   ✔ Recorte (overflow).
+
+   NO DEBE DEFINIR
+
+   ✘ Colores.
+   ✘ Gradientes.
+   ✘ Texturas.
+   ✘ Identidad editorial.
+   ✘ Temáticas visuales.
+
+   La identidad visual pertenece exclusivamente al CSS de
+   cada experiencia:
+
+   - SaboresLocalesPage.css
+   - EmergenciasFarmPage.css
+   - TurismoPage.css
+   - BienestarPage.css
+   - etc.
+
+   De esta forma todas las experiencias reutilizan la misma
+   estructura, pero cada una posee su propia personalidad.
+
+========================================================== */
+
+.experience-frame{
+
+    /* ==========================================
+       ESTRUCTURA
+    ========================================== */
+
+    position: relative;
+
+    overflow: hidden;
+
+    margin: 0;
+
+    padding: 2px;
+
+    border-radius: 8px;
+
+    /* ==========================================
+       PRESENTACIÓN COMÚN
+    ========================================== */
+
+    /*
+       La sombra pertenece al lenguaje visual de
+       QUILLÓN AHORA y no a una experiencia.
+    */
+
+    box-shadow:
+        0 10px 28px rgba(0,0,0,.18);
+
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+/*
+   Reservado para futuras adaptaciones
+   Tablet / Desktop
+*/

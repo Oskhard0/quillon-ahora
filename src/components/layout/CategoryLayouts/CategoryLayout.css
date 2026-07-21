@@ -1,0 +1,31 @@
+/**
+ * -------------------------------------------------------------------
+ * CategoryLayout
+ * -------------------------------------------------------------------
+ *
+ * Contenedor principal para experiencias organizadas por categorías.
+ *
+ * Su responsabilidad es únicamente distribuir las CategorySection.
+ *
+ * No define estilos internos de las categorías.
+ * -------------------------------------------------------------------
+ */
+
+.category-layout {
+
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+
+    max-width: 1200px;
+
+    margin: 0 auto;
+
+    padding: 2rem 0.5rem 4rem;
+
+    box-sizing: border-box;
+
+    gap: 2rem;
+
+}

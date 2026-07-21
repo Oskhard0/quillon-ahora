@@ -1,0 +1,57 @@
+.hero{
+
+    position:relative;
+
+    width:100%;
+
+    height:360px;
+
+    background-size:cover;
+
+    background-position:center;
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+}
+
+.hero-overlay{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:flex-end;
+
+    padding:32px;
+
+    background:linear-gradient(
+        to top,
+        rgba(0,0,0,.70),
+        rgba(0,0,0,.10)
+    );
+
+}
+
+.hero h1{
+
+    color:white;
+
+    margin:0;
+
+}
+
+.hero p{
+
+    color:white;
+
+    margin-top:10px;
+
+    max-width:600px;
+
+}

@@ -1,0 +1,80 @@
+/* =======================================================
+   EXPERIENCE OVERLAY
+======================================================= */
+
+.experience-overlay{
+
+    position:fixed;
+
+    inset:0;
+
+    z-index:5000;
+
+    overflow-y:auto;
+
+    background: rgba(230, 214, 177, 0.92);
+
+    backdrop-filter: blur(8px);
+
+    -webkit-backdrop-filter: blur(8px);
+
+}
+
+
+/* =======================================================
+   FONDO
+======================================================= */
+
+.experience-backdrop{
+
+    position:absolute;
+
+    inset:0;
+
+    backdrop-filter:blur(6px);
+
+    background:rgba(0,0,0,.20);
+
+}
+
+
+/* =======================================================
+   CONTENIDO
+======================================================= */
+
+.experience-content{
+
+    position:relative;
+
+    z-index:1;
+
+    min-height:100vh;
+
+    animation:experienceEnter .30s ease;
+
+}
+
+
+/* =======================================================
+   ANIMACIÓN
+======================================================= */
+
+@keyframes experienceEnter{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(12px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
+
+}

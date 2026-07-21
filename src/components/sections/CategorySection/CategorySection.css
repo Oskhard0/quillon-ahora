@@ -1,0 +1,123 @@
+/**
+ * ---------------------------------------------------------
+ * CategorySection
+ * ---------------------------------------------------------
+ * Estilos base para una sección de categoría dentro de un
+ * CategoryLayout.
+ *
+ * Debe ser reutilizable por cualquier experiencia que utilice
+ * este tipo de layout.
+ * ---------------------------------------------------------
+ */
+
+.category-section {
+
+    margin-bottom: 0.5rem;
+
+}
+
+.category-header {
+
+    margin-bottom: 0.5rem;
+
+}
+
+.category-header h2 {
+
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+
+    margin: 0;
+
+    font-size: 1.5rem;
+    font-weight: 700;
+
+    color: #2F2F2F;
+
+}
+
+.category-featured {
+
+    margin-bottom: 1rem;
+
+}
+
+.category-featured h3 {
+
+    margin-bottom: .75rem;
+
+    font-size: .95rem;
+    font-weight: 700;
+    color: #555;
+    letter-spacing: .02em;
+
+}
+
+.featured-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 1rem;
+
+}
+
+.featured-placeholder {
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    min-height: 150px;
+
+    border-radius: 10px;
+
+    border: 2px dashed #D7D7D7;
+
+    background: #FFFFFF;
+
+    color: #7A7A7A;
+
+    font-weight: 600;
+
+}
+
+.category-more {
+
+    width: 100%;
+
+    padding: 14px 18px;
+
+    margin-top: .5rem;
+
+    border: 1px solid #DDDDDD;
+
+    border-radius: 5px;
+
+    background: rgba(255,255,255,.85);
+
+    color: #424242;
+
+    font-size: .95rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background .2s ease,
+        transform .15s ease,
+        box-shadow .2s ease;
+
+}
+
+.category-more:hover {
+
+    background: rgba(255,255,255,.98);
+
+    transform: translateY(-1px);
+
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}

@@ -1,3 +1,9 @@
+import tranqueViejo from "../assets/editorial/comercios/tranque_viejo.jfif";
+import gelateriaSabores from "../assets/editorial/comercios/gelateria_saboresdelvalle.webp";
+import libreriaQuillon from "../assets/editorial/comercios/libreria_quillon.jfif";
+import repuestosTorresriquelme from "../assets/editorial/comercios/torres_riquelme.jfif";
+import veterinariaCayumanqui from "../assets/editorial/comercios/veterinaria_cayumanqui.webp";
+
 const comercios = [
   {
     id: 1,
@@ -7,6 +13,7 @@ const comercios = [
     direccion: "O'higgins 489",
     telefono: "+56912345678",
     destacado : true,
+    imagen: tranqueViejo,
     prioridad: 2,
      horario: {
             lunes: [{abre: "09:00", cierra: "01:30"}],
@@ -504,6 +511,7 @@ const comercios = [
     direccion: "Jacinto Sepulveda 126",
     telefono: "422429702",
     destacado : true,
+    imagen: libreriaQuillon,
     prioridad: 2,
     horario: {
             lunes: [{abre: "08:00", cierra: "21:30"}],
@@ -545,6 +553,7 @@ const comercios = [
     telefono: null,
     whatsapp: 56985796870,
     destacado : true,
+    imagen: veterinariaCayumanqui,
     prioridad: 1,
     horario: {
             lunes: [{abre: "08:00", cierra: "21:00"}],
@@ -565,6 +574,7 @@ const comercios = [
     direccion: "Roble 365",   
     telefono: null,
     destacado : true,
+    imagen: repuestosTorresriquelme,
     prioridad: 2,
     horario: {
             lunes: [{abre: "08:00", cierra: "21:30"}],
@@ -602,9 +612,10 @@ const comercios = [
     nombre: "Gelateria Sabores del Valle",
     categoria: "Heladeria",
     referencia: "Frente a la plaza, al lado de la sra mauda",
-    direccion: "El roble 269",
+    direccion: "El roble 269",    
     telefono: null,
-    destacado : false,
+    destacado : true,
+    imagen: gelateriaSabores,
     prioridad: 2,
     horario: {
             lunes: [{abre: "08:00", cierra: "21:30"}],
