@@ -1,6 +1,6 @@
 import "./Compass.css";
 import { FaCompass } from "react-icons/fa";
-import RadialButton from "../Radial/RadialButton";
+import RadialButton from "../radial/RadialButton";
 
 function CompassHub({ x, y, onClick }) {
 
